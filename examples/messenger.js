@@ -18,14 +18,22 @@ const sqsMessenger = new SqsMessenger({ sqs, sns }, {
 })
 
 const myTopic = sqsMessenger.createTopic('myTopic')
-const myQueue = sqsMessenger.createQueue('myQueue', myTopic)
+const myQueue = sqsMessenger.createQueue('myQueue', {
+  bindTopic: myTopic,
+  withDeadLetter: false,
+})
 
-
+myQueue.deadLetterQueue.onMessage((messsage, done)=> {
+  // do something
+  done()
+})
 // register consumer on queue
 sqsMessenger.on('myQueue', (message, done) => {
   // do something
   console.log(message)
   done()
+}, {
+  batchSize: 10,
 })
 
 // send message to topic

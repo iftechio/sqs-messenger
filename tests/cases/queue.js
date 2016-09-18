@@ -85,8 +85,8 @@ test.serial('should create deadletter queue', t => {
       Attributes: {
         VisibilityTimeout: '30',
         MaximumMessageSize: '262144',
-        RedrivePolicy: '{"maxReceiveCount":"5", "deadLetterTargetArn":"arn:sqs:test:test_q2-dl"}',
         Policy: expectPolicy,
+        RedrivePolicy: '{"maxReceiveCount":"5", "deadLetterTargetArn":"arn:sqs:test:test_q2-dl"}',
       },
     })
   })
