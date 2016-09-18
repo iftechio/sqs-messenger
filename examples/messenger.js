@@ -1,11 +1,3 @@
-sqs-messenger
-===
-
-## Introduction
-This library makes message sending/receiving in SQS/SNS easy.
-
-## Simple usage
-```
 const AWS = require('aws-sdk')
 const SqsMessenger = require('../lib/messenger')
 
@@ -28,14 +20,20 @@ const sqsMessenger = new SqsMessenger({ sqs, sns }, {
 const myTopic = sqsMessenger.createTopic('myTopic')
 const myQueue = sqsMessenger.createQueue('myQueue', {
   bindTopic: myTopic,
+  withDeadLetter: false,
 })
 
-
+myQueue.deadLetterQueue.onMessage((messsage, done)=> {
+  // do something
+  done()
+})
 // register consumer on queue
 sqsMessenger.on('myQueue', (message, done) => {
   // do something
   console.log(message)
   done()
+}, {
+  batchSize: 10,
 })
 
 // send message to topic
@@ -43,33 +41,3 @@ sqsMessenger.sendTopicMessage('myTopic', { text: 'a simple message send to topic
 
 // send message to queue
 sqsMessenger.sendQueueMessage('myQueue', { text: 'a simple message send directly to queue' })
-```
-
-## Advanced usage
-```
-const myQueue = sqsMessenger.createQueue('myQueue', {
-    bindTopic: myTopic,
-    withDeadLetter: true,
-})
-
-sqsMessenger.on('myQueue', (message, done) => {
-  // do something
-  console.log(message)
-  done()
-}, {
-  batchSize: 10
-})
-
-myQueue.deadLetterQueue.onMessage((messsage, done)=> {
-  // do something
-  done()
-})
-
-```
-
-## Features
- - Automatically create SNS topic, SQS queue and subscription
- - Dead letter support
- - Automatically acknowledge message on consumer finished
- - Batch sending(TODO)
- - Message schema validation(TODO)

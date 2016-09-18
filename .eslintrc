@@ -1,0 +1,18 @@
+{
+  "parser": "babel-eslint",
+  "env":{
+    "node": true
+  },
+  "extends": "airbnb",
+  "rules":{
+    "semi": ["error", "never"],
+    "no-param-reassign": "off",
+    "indent": ["error", 2],
+    "no-console": 0,
+    "no-unused-expressions": "off",
+    "camelcase": "off",
+    "radix": "off",
+    "no-underscore-dangle": "warn",
+    "arrow-parens": "off"
+  }
+}
