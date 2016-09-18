@@ -5,7 +5,7 @@ sqs-messenger
 This library makes message sending/receiving in SQS/SNS easy.
 
 ## Simple usage
-```
+```javascript
 const AWS = require('aws-sdk')
 const SqsMessenger = require('../lib/messenger')
 
@@ -46,7 +46,7 @@ sqsMessenger.sendQueueMessage('myQueue', { text: 'a simple message send directly
 ```
 
 ## Advanced usage
-```
+```javascript
 const myQueue = sqsMessenger.createQueue('myQueue', {
     bindTopic: myTopic,
     withDeadLetter: true,
