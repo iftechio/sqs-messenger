@@ -17,13 +17,18 @@ const sqsMessenger = new SqsMessenger({ sqs, sns }, {
   resourceNamePrefix: 'test_',
 })
 
+sqsMessenger.onError(err => {
+  console.log('Error handled')
+  console.error(err.stack)
+})
+
 const myTopic = sqsMessenger.createTopic('myTopic')
 const myQueue = sqsMessenger.createQueue('myQueue', {
   bindTopic: myTopic,
-  withDeadLetter: false,
+  withDeadLetter: true,
 })
 
-myQueue.deadLetterQueue.onMessage((messsage, done)=> {
+myQueue.deadLetterQueue.onMessage((messsage, done) => {
   // do something
   done()
 })
