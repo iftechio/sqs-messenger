@@ -65,6 +65,11 @@ myQueue.deadLetterQueue.onMessage((messsage, done)=> {
   done()
 })
 
+sqsMessenger.onError(err => {
+  console.log('Error handled')
+  console.error(err.stack)
+})
+
 ```
 
 ## Features
