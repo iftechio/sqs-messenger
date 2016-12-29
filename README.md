@@ -1,7 +1,5 @@
 sqs-messenger
 ===
-
-## Introduction
 This library makes message sending/receiving in SQS/SNS easy.
 
 ## Simple usage
