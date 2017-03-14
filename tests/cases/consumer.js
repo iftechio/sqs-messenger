@@ -70,7 +70,7 @@ test.serial('should handle consumer handler timeout', t => {
   return new Promise((resolve, reject) => {
     consumer.on('error', (msg, err) => {
       try {
-        t.is(msg, 'Consumer handler error')
+        t.is(msg, 'Consumer[c3] handler error')
       } catch (e) {
         reject(e)
       }
