@@ -48,6 +48,7 @@ sqsMessenger.sendQueueMessage('myQueue', { text: 'a simple message send directly
 const myQueue = sqsMessenger.createQueue('myQueue', {
     bindTopic: myTopic,
     withDeadLetter: true,
+    maxReceiveCount: 3,
 })
 
 sqsMessenger.on('myQueue', (message, done) => {
