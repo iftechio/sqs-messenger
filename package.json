@@ -12,6 +12,7 @@
     "aws-sdk": "^2.6.2"
   },
   "devDependencies": {
+    "aws-sdk": "^2.6.2",
     "ava": "^0.16.0",
     "sinon": "^1.17.5"
   },
