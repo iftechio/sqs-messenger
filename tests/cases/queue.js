@@ -92,3 +92,31 @@ test.serial('should create deadletter queue', t => {
   })
 })
 
+function shutdownMacro(t, input, expected) {
+  const sandbox = t.context.sandbox
+  sandbox.stub(sqs, 'createQueue').callsArgWithAsync(1, null, {
+    QueueUrl: 'http://test:c'
+  })
+  sandbox.stub(sqs, 'receiveMessage').onFirstCall().callsArgWithAsync(1, null, {
+    Messages: [{ Body: '{}' }]
+  })
+  sandbox.stub(sqs, 'deleteMessage', () => {})
+
+  const queue = new Queue('q')
+  return Promise.delay(200).then(() => {
+    const spy = sinon.spy()
+    const consumer = queue.onMessage((message, done) => {
+      setTimeout(() => {
+        spy()
+        done()
+      }, 500)
+    })
+    return queue.shutdown(input).then(() => {
+      t.false(consumer.running)
+      t.is(spy.called, expected)
+    })
+  })
+}
+
+test.serial('should shutdown gracefully with timeout', shutdownMacro, 600, true)
+test.serial('should shutdown violently without timeout', shutdownMacro, 0, false)
