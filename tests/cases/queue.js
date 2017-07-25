@@ -100,7 +100,7 @@ function shutdownMacro(t, input, expected) {
   sandbox.stub(sqs, 'receiveMessage').onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{}' }]
   })
-  sandbox.stub(sqs, 'deleteMessage', () => {})
+  sandbox.stub(sqs, 'deleteMessage', (params, callback) => callback())
 
   const queue = new Queue('q')
   return Promise.delay(200).then(() => {
@@ -111,12 +111,14 @@ function shutdownMacro(t, input, expected) {
         done()
       }, 500)
     })
+    const startTime = Date.now()
     return queue.shutdown(input).then(() => {
+      t.true(Date.now() - startTime < 1000)
       t.false(consumer.running)
       t.is(spy.called, expected)
     })
   })
 }
 
-test.serial('should shutdown gracefully with timeout', shutdownMacro, 600, true)
+test.serial('should shutdown gracefully with timeout', shutdownMacro, 10000, true)
 test.serial('should shutdown violently without timeout', shutdownMacro, 0, false)
