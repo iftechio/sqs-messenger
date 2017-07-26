@@ -68,12 +68,36 @@ sqsMessenger.onError(err => {
   console.log('Error handled')
   console.error(err.stack)
 })
+```
 
+## Graceful shutdown
+
+shutdown queue with `queue.shutdown(timeout)`:
+
+```javascript
+const myQueue = sqsMessenger.createQueue('myQueue')
+process.once('SIGTERM', () => {
+  myQueue.shutdown(5000).then(() => {
+    process.exit(0)
+  })
+})
+```
+
+or shutdown all queues with `messenger.shutdown(timeout)`,
+each queue will have at most `timeout` time to cleanup:
+
+```javascript
+process.once('SIGTERM', () => {
+  sqsMessenger.shutdown(5000).then(() => {
+    process.exit(0)
+  })
+})
 ```
 
 ## Features
  - Automatically create SNS topic, SQS queue and subscription
  - Dead letter support
  - Automatically acknowledge message on consumer finished
+ - Graceful shutdown support
  - Batch sending(TODO)
  - Message schema validation(TODO)
