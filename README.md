@@ -46,11 +46,12 @@ sqsMessenger.sendQueueMessage('myQueue', { text: 'a simple message send directly
 ## Advanced usage
 ```javascript
 const myQueue = sqsMessenger.createQueue('myQueue', {
-    bindTopic: myTopic,
-    withDeadLetter: true,
-    maxReceiveCount: 3,
+  bindTopic: myTopic,
+  withDeadLetter: true,
+  maxReceiveCount: 3,
 })
 
+// batchSize
 sqsMessenger.on('myQueue', (message, done) => {
   // do something
   console.log(message)
@@ -64,9 +65,18 @@ myQueue.deadLetterQueue.onMessage((messsage, done)=> {
   done()
 })
 
+// Error handling
 sqsMessenger.onError(err => {
   console.log('Error handled')
   console.error(err.stack)
+})
+
+// Start multiple consumers for a queue
+sqsMessenger.on('myQueue', (message, done) => {
+  // do something
+  done()
+}, {
+  consumers: 5
 })
 ```
 
