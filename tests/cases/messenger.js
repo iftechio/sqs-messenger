@@ -3,9 +3,11 @@ const test = require('ava')
 const Promise = require('bluebird')
 
 const sqs = require('../../lib/clients').sqs
+const sns = require('../../lib/clients').sns
 const SqsMessenger = require('../../lib/messenger')
 const Queue = require('../../lib/queue')
 const Consumer = require('../../lib/consumer')
+const Topic = require('../../lib/topic')
 
 test.beforeEach(t => {
   t.context.sandbox = sinon.sandbox.create()
@@ -13,6 +15,7 @@ test.beforeEach(t => {
     QueueUrl: 'http://test:c'
   })
   t.context.sandbox.stub(sqs, 'deleteMessage', (params, callback) => callback())
+  t.context.sandbox.stub(sns, 'createTopic').callsArgWithAsync(1, null, { TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
 })
 
 test.afterEach(t => {
@@ -41,7 +44,7 @@ test.serial.cb('register one consumer', t => {
   })
 
   sqsMessenger.createQueue('myQueue')
-  
+
   const consumer = sqsMessenger.on('myQueue', (message, done) => {
     done()
     t.end()
@@ -67,7 +70,7 @@ test.serial.cb('register two consumers', t => {
   })
 
   sqsMessenger.createQueue('myQueue')
-  
+
   let numbers = []
   const consumers = sqsMessenger.on('myQueue', (message, done) => {
     numbers.push(message.n)
@@ -85,4 +88,44 @@ test.serial.cb('register two consumers', t => {
     t.true(consumer instanceof Consumer)
   })
 
+})
+
+test.serial.cb('bind topic', t => {
+  const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe', () => {})
+  const sqsMessenger = new SqsMessenger({ sqs }, {
+    sqsArnPrefix: 'arn:sqs:test:',
+    resourceNamePrefix: 'test_'
+  })
+  const topic  = new Topic('topic')
+  const quene = sqsMessenger.createQueue('myQueue', {
+    bindTopic: topic,
+  })
+  quene.on('ready', () => {
+    t.true(topicSubscribeStub.calledOnce)
+    t.true(topicSubscribeStub.calledOn(topic))
+    t.true(topicSubscribeStub.calledWith(quene))
+    t.end()
+  })
+})
+
+test.serial.cb('bind topics', t => {
+  const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe', () => {})
+  const sqsMessenger = new SqsMessenger({ sqs }, {
+    sqsArnPrefix: 'arn:sqs:test:',
+    resourceNamePrefix: 'test_'
+  })
+  const topic1  = new Topic('topic1')
+  const topic2  = new Topic('topic2')
+  const topic3  = new Topic('topic3')
+  const quene = sqsMessenger.createQueue('myQueue', {
+    bindTopics: [topic1, topic2, topic3],
+  })
+  quene.on('ready', () => {
+    t.true(topicSubscribeStub.calledThrice)
+    t.true(topicSubscribeStub.calledOn(topic1))
+    t.true(topicSubscribeStub.calledOn(topic2))
+    t.true(topicSubscribeStub.calledOn(topic3))
+    t.true(topicSubscribeStub.calledWith(quene))
+    t.end()
+  })
 })

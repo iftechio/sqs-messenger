@@ -46,7 +46,7 @@ sqsMessenger.sendQueueMessage('myQueue', { text: 'a simple message send directly
 ## Advanced usage
 ```javascript
 const myQueue = sqsMessenger.createQueue('myQueue', {
-  bindTopic: myTopic,
+  bindTopics: [myTopic],
   withDeadLetter: true,
   maxReceiveCount: 3,
 })
