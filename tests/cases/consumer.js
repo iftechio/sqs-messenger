@@ -79,7 +79,7 @@ test.serial('should handle consumer handler timeout', t => {
   }).timeout(2000)
 })
 
-test.serial('should delete batch messages on done', t => {
+test.serial.cb('should delete batch messages on done', t => {
   const c4 = new Queue('c4')
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
@@ -113,7 +113,7 @@ test.serial('should delete batch messages on done', t => {
       { text: 'hahaha4' },
     ])
     done()
-  })
+  }, { batchHandle: true })
   setTimeout(() => {
     mock.verify()
     t.end()
