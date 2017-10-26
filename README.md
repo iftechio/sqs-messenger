@@ -60,6 +60,15 @@ sqsMessenger.on('myQueue', (message, done) => {
   batchSize: 10
 })
 
+// batch handling
+sqsMessenger.on('myQueue', (messages, done) => {
+  console.log(messages.length) // 10
+  done()
+}, {
+  batchSize: 10,
+  batchHandle: true,
+})
+
 myQueue.deadLetterQueue.onMessage((messsage, done)=> {
   // do something
   done()
