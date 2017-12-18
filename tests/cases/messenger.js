@@ -52,7 +52,7 @@ test.serial.cb('register one consumer', t => {
   t.true(consumer instanceof Consumer)
 })
 
-test.serial.cb.skip('register two consumers', t => {
+test.serial.cb('register two consumers', t => {
   const receiveMessage = t.context.sandbox.stub(sqs, 'receiveMessage')
   receiveMessage.onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{"n": 1}' }]
