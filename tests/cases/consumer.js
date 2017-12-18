@@ -10,6 +10,7 @@ test.before(t => {
   sinon.stub(sqs, 'createQueue')
     .callsArgWithAsync(1, null, { QueueUrl: 'http://test:c' })
 })
+
 test.beforeEach(t => {
   t.context.sandbox = sinon.sandbox.create()
 })
@@ -19,7 +20,6 @@ test.afterEach(t => {
 })
 
 test.serial.cb('should receive message', t => {
-
   const c1 = new Queue('c1')
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
@@ -61,7 +61,6 @@ test.serial('should handle consumer handler timeout', t => {
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
-
 
   const consumer = c3.onMessage((message, done) => {
     // do nothing, wait for timeout

@@ -10,6 +10,7 @@ test.before(t => {
   sinon.stub(config, 'getResourceNamePrefix').returns('test_')
   sinon.stub(config, 'getSqsArnPrefix').returns('arn:sqs:test:')
 })
+
 test.beforeEach(t => {
   t.context.sandbox = sinon.sandbox.create()
 })
@@ -20,10 +21,10 @@ test.afterEach(t => {
 
 test.serial('should create queue', t => {
   const mock = t.context.sandbox.mock(sqs).expects('createQueue')
-      .once()
-      .callsArgWithAsync(1, null, {
-        QueueUrl: 'http://test_q1',
-      })
+    .once()
+    .callsArgWithAsync(1, null, {
+      QueueUrl: 'http://test_q1',
+    })
 
   const q1 = new Queue('q1')
   return Promise.delay(200).then(() => {
@@ -54,10 +55,10 @@ test.serial('should create queue', t => {
 
 test.serial('should create deadletter queue', t => {
   const mock = t.context.sandbox.mock(sqs).expects('createQueue')
-      .twice()
-      .callsArgWithAsync(1, null, {
-        QueueUrl: 'http://test_q1',
-      })
+    .twice()
+    .callsArgWithAsync(1, null, {
+      QueueUrl: 'http://test_q1',
+    })
 
   const q2 = new Queue('q2', { withDeadLetter: true })
   return Promise.delay(200).then(() => {
@@ -100,7 +101,7 @@ function shutdownMacro(t, input, expected) {
   sandbox.stub(sqs, 'receiveMessage').onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{}' }]
   })
-  sandbox.stub(sqs, 'deleteMessage', (params, callback) => callback())
+  sandbox.stub(sqs, 'deleteMessage').callsFake((params, callback) => callback())
 
   const queue = new Queue('q')
   return Promise.delay(200).then(() => {

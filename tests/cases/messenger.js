@@ -14,7 +14,7 @@ test.beforeEach(t => {
   t.context.sandbox.stub(sqs, 'createQueue').callsArgWithAsync(1, null, {
     QueueUrl: 'http://test:c'
   })
-  t.context.sandbox.stub(sqs, 'deleteMessage', (params, callback) => callback())
+  t.context.sandbox.stub(sqs, 'deleteMessage').callsFake((params, callback) => callback())
   t.context.sandbox.stub(sns, 'createTopic').callsArgWithAsync(1, null, { TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
 })
 
@@ -33,7 +33,6 @@ test.serial('create queue', t => {
 })
 
 test.serial.cb('register one consumer', t => {
-
   t.context.sandbox.stub(sqs, 'receiveMessage').onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{}' }]
   })
@@ -51,11 +50,9 @@ test.serial.cb('register one consumer', t => {
   })
 
   t.true(consumer instanceof Consumer)
-
 })
 
 test.serial.cb('register two consumers', t => {
-
   const receiveMessage = t.context.sandbox.stub(sqs, 'receiveMessage')
   receiveMessage.onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{"n": 1}' }]
@@ -87,11 +84,10 @@ test.serial.cb('register two consumers', t => {
   consumers.forEach(consumer => {
     t.true(consumer instanceof Consumer)
   })
-
 })
 
 test.serial.cb('bind topic', t => {
-  const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe', () => { })
+  const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
   const sqsMessenger = new SqsMessenger({ sqs }, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
@@ -109,7 +105,7 @@ test.serial.cb('bind topic', t => {
 })
 
 test.serial.cb('bind topics', t => {
-  const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe', () => { })
+  const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
   const sqsMessenger = new SqsMessenger({ sqs }, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
