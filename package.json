@@ -3,6 +3,10 @@
   "version": "0.8.0",
   "description": "",
   "main": "index.js",
+  "scripts": {
+    "build": "exit 0",
+    "test": "ava tests"
+  },
   "dependencies": {
     "bluebird": "3.5.1",
     "debug": "3.1.0"
@@ -15,14 +19,14 @@
     "ava": "0.16.0",
     "sinon": "4.1.3"
   },
-  "scripts": {
-    "test": "ava tests"
-  },
   "author": "",
   "license": "ISC",
   "ava": {
     "require": [
       "./tests/_init"
     ]
+  },
+  "publishConfig": {
+    "registry": "http://npmjs.ruguoapp.com"
   }
 }
