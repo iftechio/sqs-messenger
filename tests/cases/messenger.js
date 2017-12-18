@@ -87,7 +87,7 @@ test.serial.cb.skip('register two consumers', t => {
 })
 
 test.serial.cb('bind topic', t => {
-  const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
+  const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe')
   const sqsMessenger = new SqsMessenger({ sqs }, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
@@ -105,7 +105,7 @@ test.serial.cb('bind topic', t => {
 })
 
 test.serial.cb('bind topics', t => {
-  const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
+  const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe')
   const sqsMessenger = new SqsMessenger({ sqs }, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
