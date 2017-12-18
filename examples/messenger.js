@@ -38,8 +38,8 @@ sqsMessenger.on('myQueue', (message, done) => {
   console.log(message)
   done()
 }, {
-  batchSize: 10,
-})
+    batchSize: 10,
+  })
 
 // send message to topic
 sqsMessenger.sendTopicMessage('myTopic', { text: 'a simple message send to topic' })
