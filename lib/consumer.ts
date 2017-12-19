@@ -5,16 +5,16 @@ import { SQS } from 'aws-sdk'
 
 import Queue from './queue'
 
-class Consumer extends EventEmitter {
+class Consumer<T = any> extends EventEmitter {
   queue: Queue
   running: boolean
   batchSize: number
   visibilityTimeout: number
   batchHandle: boolean
-  handler: any
+  handler: (message: T | T[], callback: (err?: Error) => void) => void
   processingMessagesPromise: any
 
-  constructor(queue: Queue, handler, opts: {
+  constructor(queue: Queue, handler: (message: T | T[], callback: (err?: Error) => void) => void, opts: {
     batchSize?: number
     visibilityTimeout?: number
     batchHandle?: boolean
@@ -78,7 +78,7 @@ class Consumer extends EventEmitter {
 
     return (this.batchHandle ?
       new bluebird((resolve, reject) => {
-        this.handler.call(null, decodedMessages, err => {
+        this.handler(decodedMessages, err => {
           if (err) {
             reject(err)
           } else {
@@ -88,7 +88,7 @@ class Consumer extends EventEmitter {
       }) :
       bluebird.map(decodedMessages, (decodedMessage, i) => {
         return new Promise((resolve, reject) => {
-          this.handler.call(null, decodedMessage, err => {
+          this.handler(decodedMessage, err => {
             if (err) {
               reject(err)
             } else {

@@ -85,7 +85,7 @@ test.cb.serial.skip('register two consumers', t => {
         t.end()
       }
     }, 200)
-  }, { batchSize: 1, consumers: 2 })
+  }, { batchSize: 1, consumers: 2 }) as Consumer[]
 
   t.true(consumers.length == 2)
   consumers.forEach(consumer => {
@@ -138,6 +138,8 @@ test.cb.serial('send empty queue', t => {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
-  t.throws(() => messenger.sendQueueMessage('foo', {}), 'Queue[foo] not found')
-  t.end()
+  messenger.sendQueueMessage('foo', {}).catch(err => {
+    t.is(err.message, 'Queue[foo] not found')
+    t.end()
+  })
 })

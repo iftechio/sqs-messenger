@@ -124,7 +124,7 @@ class Queue extends EventEmitter {
    * @param {Object} opts - @see {Consumer}
    * @returns {Consumer}
    */
-  onMessage(consumerHandler, opts?) {
+  onMessage<T = any>(consumerHandler: (message: T | T[], callback: (err?: Error) => void) => void, opts?) {
     const consumer = new Consumer(this, consumerHandler, opts)
     this.consumers.push(consumer)
     return consumer
