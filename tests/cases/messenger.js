@@ -1,5 +1,5 @@
 const sinon = require('sinon')
-const test = require('ava')
+const test = require('../_init')
 const Promise = require('bluebird')
 
 const sqs = require('../../lib/clients').sqs
@@ -10,16 +10,11 @@ const Consumer = require('../../lib/consumer')
 const Topic = require('../../lib/topic')
 
 test.beforeEach(t => {
-  t.context.sandbox = sinon.sandbox.create()
   t.context.sandbox.stub(sqs, 'createQueue').callsArgWithAsync(1, null, {
     QueueUrl: 'http://test:c'
   })
   t.context.sandbox.stub(sqs, 'deleteMessage').callsFake((params, callback) => callback())
   t.context.sandbox.stub(sns, 'createTopic').callsArgWithAsync(1, null, { TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
-})
-
-test.afterEach(t => {
-  t.context.sandbox.restore()
 })
 
 test.serial('create queue', t => {

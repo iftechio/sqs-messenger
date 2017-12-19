@@ -1,4 +1,6 @@
+const test = require('ava')
 const AWS = require('aws-sdk')
+const sinon = require('sinon')
 
 const sqs = new AWS.SQS({
   region: 'cn-north-1',
@@ -13,3 +15,13 @@ const sns = new AWS.SNS({
 require('../lib/clients').set({
   sqs, sns,
 })
+
+test.beforeEach(t => {
+  t.context.sandbox = sinon.sandbox.create()
+})
+
+test.afterEach.always(t => {
+  t.context.sandbox.restore()
+})
+
+module.exports = test

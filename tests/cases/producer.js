@@ -1,5 +1,5 @@
 const sinon = require('sinon')
-const test = require('ava')
+const test = require('../_init')
 
 const clients = require('../../lib/clients')
 const Producer = require('../../lib/producer')
@@ -9,14 +9,6 @@ let producer
 
 test.before(t => {
   producer = new Producer(protocol)
-})
-
-test.beforeEach(t => {
-  t.context.sandbox = sinon.sandbox.create()
-})
-
-test.afterEach(t => {
-  t.context.sandbox.restore()
 })
 
 test('should send to topic', t => {

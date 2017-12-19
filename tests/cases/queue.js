@@ -1,6 +1,6 @@
 const Promise = require('bluebird')
 const sinon = require('sinon')
-const test = require('ava')
+const test = require('../_init')
 
 const sqs = require('../../lib/clients').sqs
 const Queue = require('../../lib/queue')
@@ -9,14 +9,6 @@ const config = require('../../lib/config')
 test.before(t => {
   sinon.stub(config, 'getResourceNamePrefix').returns('test_')
   sinon.stub(config, 'getSqsArnPrefix').returns('arn:sqs:test:')
-})
-
-test.beforeEach(t => {
-  t.context.sandbox = sinon.sandbox.create()
-})
-
-test.afterEach(t => {
-  t.context.sandbox.restore()
 })
 
 test.serial('should create queue', t => {

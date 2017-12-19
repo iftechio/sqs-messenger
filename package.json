@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "exit 0",
-    "test": "ava -T 10000 -s tests"
+    "test": "AWS_ACCESS_KEY_ID=ABCDEF AWS_SECRET_ACCESS_KEY=ABCDEF ava -T 10000 -s tests"
   },
   "dependencies": {
     "bluebird": "3.5.1",
@@ -21,11 +21,6 @@
   },
   "author": "",
   "license": "ISC",
-  "ava": {
-    "require": [
-      "./tests/_init"
-    ]
-  },
   "publishConfig": {
     "registry": "http://npmjs.ruguoapp.com"
   }

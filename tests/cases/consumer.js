@@ -1,4 +1,4 @@
-const test = require('ava')
+const test = require('../_init')
 const sinon = require('sinon')
 const Promise = require('bluebird')
 
@@ -9,14 +9,6 @@ const config = require('../../lib/config')
 test.before(t => {
   sinon.stub(sqs, 'createQueue')
     .callsArgWithAsync(1, null, { QueueUrl: 'http://test:c' })
-})
-
-test.beforeEach(t => {
-  t.context.sandbox = sinon.sandbox.create()
-})
-
-test.afterEach(t => {
-  t.context.sandbox.restore()
 })
 
 test.serial.cb('should receive message', t => {
