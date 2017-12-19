@@ -19,63 +19,69 @@ function create(name) {
   })
 }
 
-function Topic(name) {
-  this.name = name
-  this.realName = config.getResourceNamePrefix() + name
-  this.isReady = false
+class Topic extends EventEmitter {
+  isReady: boolean
+  name: string
+  realName: string
+  arn: string
 
-  create(this.realName).then(data => {
-    debug('topic created', data)
-    this.arn = data.TopicArn
-    this.isReady = true
-    this.emit('ready')
-  }, error => this.emit('error', error))
-}
-util.inherits(Topic, EventEmitter)
+  constructor(name) {
+    super()
+    this.name = name
+    this.realName = config.getResourceNamePrefix() + name
+    this.isReady = false
 
-/**
- * Subscribe queue to topic, queue must be declared already.
- * @param {Queue} queue
- */
-Topic.prototype.subscribe = function (queue) {
-  return Promise.resolve().then(() => {
-    if (this.isReady) {
-      return null
-    }
-    return new Promise((resolve) => {
-      this.on('ready', () => resolve())
-    })
-  }).then(() =>
-    new Promise((resolve, reject) => {
-      clients.sns.subscribe({
-        Protocol: 'sqs',
-        TopicArn: this.arn,
-        Endpoint: queue.arn,
-      }, (err, data) => {
-        if (err) {
-          debug(`Error subscribing ${queue.name}(${queue.realName}) to ${this.name}(${this.realName})`)
-          reject(err)
-        } else {
-          debug(`Succeed subscribing ${queue.name}(${queue.realName}) to ${this.name}(${this.realName})`)
-          resolve(data)
-        }
+    create(this.realName).then(data => {
+      debug('topic created', data)
+      this.arn = data.TopicArn
+      this.isReady = true
+      this.emit('ready')
+    }, error => this.emit('error', error))
+  }
+
+  /**
+   * Subscribe queue to topic, queue must be declared already.
+   */
+  subscribe(queue) {
+    return Promise.resolve().then(() => {
+      if (this.isReady) {
+        return null
+      }
+      return new Promise((resolve) => {
+        this.on('ready', () => resolve())
       })
-    })
-    ).then((data) =>
+    }).then(() =>
       new Promise((resolve, reject) => {
-        clients.sns.setSubscriptionAttributes({
-          SubscriptionArn: data.SubscriptionArn,
-          AttributeName: 'RawMessageDelivery',
-          AttributeValue: 'true',
-        }, err => {
+        clients.sns.subscribe({
+          Protocol: 'sqs',
+          TopicArn: this.arn,
+          Endpoint: queue.arn,
+        }, (err, data) => {
           if (err) {
+            debug(`Error subscribing ${queue.name}(${queue.realName}) to ${this.name}(${this.realName})`)
             reject(err)
           } else {
-            resolve()
+            debug(`Succeed subscribing ${queue.name}(${queue.realName}) to ${this.name}(${this.realName})`)
+            resolve(data)
           }
         })
       })
-    )
+      ).then((data) =>
+        new Promise((resolve, reject) => {
+          clients.sns.setSubscriptionAttributes({
+            SubscriptionArn: data.SubscriptionArn,
+            AttributeName: 'RawMessageDelivery',
+            AttributeValue: 'true',
+          }, err => {
+            if (err) {
+              reject(err)
+            } else {
+              resolve()
+            }
+          })
+        })
+      )
+  }
 }
 
 export default Topic
