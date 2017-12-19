@@ -18,8 +18,7 @@ const consumer_1 = require("./consumer");
  * @param {Number} [opts.maxReceiveCount=5]
  * @constructor
  */
-function Queue(name, opts) {
-    opts = opts || {};
+function Queue(name, opts = {}) {
     this.opts = {
         withDeadLetter: (typeof opts.withDeadLetter === 'boolean') ? opts.withDeadLetter : false,
         visibilityTimeout: (opts.visibilityTimeout || 30).toString(),

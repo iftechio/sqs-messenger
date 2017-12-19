@@ -1,10 +1,10 @@
-import test from '../_init'
+import test from './_init'
 import * as sinon from 'sinon'
 import * as Promise from 'bluebird'
 
-import { sqs } from '../../lib/clients'
-import Queue from '../../lib/queue'
-import * as config from '../../lib/config'
+import { sqs } from '../lib/clients'
+import Queue from '../lib/queue'
+import * as config from '../lib/config'
 
 test.before(t => {
   sinon.stub(sqs, 'createQueue')

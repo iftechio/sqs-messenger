@@ -1,9 +1,9 @@
-import test from '../_init'
+import test from './_init'
 import * as sinon from 'sinon'
 
-import * as clients from '../../lib/clients'
-import Producer from '../../lib/producer'
-import * as protocol from '../../lib/protocols/jsonProtocol'
+import * as clients from '../lib/clients'
+import Producer from '../lib/producer'
+import * as protocol from '../lib/protocols/jsonProtocol'
 
 let producer
 

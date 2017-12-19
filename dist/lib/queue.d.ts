@@ -9,5 +9,5 @@
  * @param {Number} [opts.maxReceiveCount=5]
  * @constructor
  */
-declare function Queue(name: any, opts: any): void;
+declare function Queue(name: any, opts?: any): void;
 export default Queue;

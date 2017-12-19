@@ -1,4 +1,5 @@
 import test from 'ava'
+import 'source-map-support/register'
 import * as AWS from 'aws-sdk'
 import * as sinon from 'sinon'
 

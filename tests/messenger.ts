@@ -1,12 +1,12 @@
-import test from '../_init'
+import test from './_init'
 import * as sinon from 'sinon'
 import * as Promise from 'bluebird'
 
-import { sqs, sns } from '../../lib/clients'
-import SqsMessenger from '../../lib/messenger'
-import Queue from '../../lib/queue'
-import Consumer from '../../lib/consumer'
-import Topic from '../../lib/topic'
+import { sqs, sns } from '../lib/clients'
+import SqsMessenger from '../lib/messenger'
+import Queue from '../lib/queue'
+import Consumer from '../lib/consumer'
+import Topic from '../lib/topic'
 
 test.beforeEach(t => {
   t.context.sandbox.stub(sqs, 'createQueue').callsArgWithAsync(1, null, {
@@ -62,7 +62,7 @@ test.serial.cb.skip('register two consumers', t => {
 
   sqsMessenger.createQueue('myQueue')
 
-  let numbers = []
+  let numbers: any[] = []
   const consumers = sqsMessenger.on('myQueue', (message, done) => {
     numbers.push(message.n)
     setTimeout(() => {

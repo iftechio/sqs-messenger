@@ -1,10 +1,10 @@
-import test from '../_init'
+import test from './_init'
 import * as Promise from 'bluebird'
 import * as sinon from 'sinon'
 
-import { sqs } from '../../lib/clients'
-import Queue from '../../lib/queue'
-import * as config from '../../lib/config'
+import { sqs } from '../lib/clients'
+import Queue from '../lib/queue'
+import * as config from '../lib/config'
 
 test.before(t => {
   sinon.stub(config, 'getResourceNamePrefix').returns('test_')
