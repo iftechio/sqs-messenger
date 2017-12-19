@@ -1,6 +1,7 @@
 import test from './_init'
 import * as sinon from 'sinon'
 import * as Promise from 'bluebird'
+import { SQS, SNS } from 'aws-sdk'
 
 import Messenger from '../lib/messenger'
 import Queue from '../lib/queue'
@@ -10,16 +11,26 @@ import Config from '../lib/config'
 
 const config = new Config()
 
+const sqs = new SQS({
+  region: 'cn-north-1',
+  apiVersion: '2012-11-05',
+})
+
+const sns = new SNS({
+  region: 'cn-north-1',
+  apiVersion: '2010-03-31',
+})
+
 test.beforeEach(t => {
-  t.context.sandbox.stub(Messenger.sqs, 'createQueue').callsArgWithAsync(1, null, {
+  t.context.sandbox.stub(sqs, 'createQueue').callsArgWithAsync(1, null, {
     QueueUrl: 'http://test:c'
   })
-  t.context.sandbox.stub(Messenger.sqs, 'deleteMessage').callsFake((params, callback) => callback())
-  t.context.sandbox.stub(Messenger.sns, 'createTopic').callsArgWithAsync(1, null, { TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
+  t.context.sandbox.stub(sqs, 'deleteMessage').callsFake((params, callback) => callback())
+  t.context.sandbox.stub(sns, 'createTopic').callsArgWithAsync(1, null, { TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
 })
 
 test.serial('create queue', t => {
-  const messenger = new Messenger({
+  const messenger = new Messenger({ sqs, sns }, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
@@ -29,11 +40,11 @@ test.serial('create queue', t => {
 })
 
 test.cb.serial('register one consumer', t => {
-  t.context.sandbox.stub(Messenger.sqs, 'receiveMessage').onFirstCall().callsArgWithAsync(1, null, {
+  t.context.sandbox.stub(sqs, 'receiveMessage').onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{}' }]
   })
 
-  const messenger = new Messenger({
+  const messenger = new Messenger({ sqs, sns }, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
@@ -49,7 +60,7 @@ test.cb.serial('register one consumer', t => {
 })
 
 test.cb.serial.skip('register two consumers', t => {
-  const receiveMessage = t.context.sandbox.stub(Messenger.sqs, 'receiveMessage')
+  const receiveMessage = t.context.sandbox.stub(sqs, 'receiveMessage')
   receiveMessage.onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{"n": 1}' }]
   })
@@ -57,7 +68,7 @@ test.cb.serial.skip('register two consumers', t => {
     Messages: [{ Body: '{"n": 2}' }]
   })
 
-  const messenger = new Messenger({
+  const messenger = new Messenger({ sqs, sns }, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
@@ -84,11 +95,11 @@ test.cb.serial.skip('register two consumers', t => {
 
 test.cb.serial('bind topic', t => {
   const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
-  const messenger = new Messenger({
+  const messenger = new Messenger({ sqs, sns }, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
-  const topic = new Topic(Messenger.sns, 'topic', config)
+  const topic = new Topic(sns, 'topic', config)
   const quene = messenger.createQueue('myQueue', {
     bindTopic: topic,
   })
@@ -102,13 +113,13 @@ test.cb.serial('bind topic', t => {
 
 test.cb.serial('bind topics', t => {
   const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
-  const messenger = new Messenger({
+  const messenger = new Messenger({ sqs, sns }, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
-  const topic1 = new Topic(Messenger.sns, 'topic1', config)
-  const topic2 = new Topic(Messenger.sns, 'topic2', config)
-  const topic3 = new Topic(Messenger.sns, 'topic3', config)
+  const topic1 = new Topic(sns, 'topic1', config)
+  const topic2 = new Topic(sns, 'topic2', config)
+  const topic3 = new Topic(sns, 'topic3', config)
   const quene = messenger.createQueue('myQueue', {
     bindTopics: [topic1, topic2, topic3],
   })
@@ -123,7 +134,7 @@ test.cb.serial('bind topics', t => {
 })
 
 test.cb.serial('send empty queue', t => {
-  const messenger = new Messenger({
+  const messenger = new Messenger({ sqs, sns }, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })

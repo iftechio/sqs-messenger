@@ -21,14 +21,8 @@ function loggingErrorHandler(...args) {
 }
 
 class Messenger {
-  static sqs = new SQS({
-    region: 'cn-north-1',
-    apiVersion: '2012-11-05',
-  })
-  static sns = new SNS({
-    region: 'cn-north-1',
-    apiVersion: '2010-03-31',
-  })
+  sqs: SQS
+  sns: SNS
   queueMap: { [name: string]: Queue } = {}
   topicMap: { [name: string]: Topic } = {}
   config: Config
@@ -37,15 +31,17 @@ class Messenger {
   sendTopicMessage: Function
   sendQueueMessage: Function
 
-  constructor(conf: {
+  constructor({ sqs, sns }: { sqs: SQS, sns: SNS }, conf: {
     snsArnPrefix?: string
     sqsArnPrefix?: string
     queueUrlPrefix?: string
     resourceNamePrefix?: string
     errorHandler?: (...args: any[]) => void
   }) {
+    this.sqs = sqs
+    this.sns = sns
     this.config = new Config(conf)
-    this.producer = new Producer(Messenger.sqs, Messenger.sns)
+    this.producer = new Producer(sqs, sns)
     this.errorHandler = conf.errorHandler || loggingErrorHandler
     this.sendTopicMessage = this.send.bind(this, TYPES.TOPIC)
     this.sendQueueMessage = this.send.bind(this, TYPES.QUEUE)
@@ -133,7 +129,7 @@ class Messenger {
    * @returns {Topic}
    */
   createTopic(name) {
-    const topic = new Topic(Messenger.sns, name, this.config)
+    const topic = new Topic(this.sns, name, this.config)
     topic.on('error', this.errorHandler)
 
     this.topicMap[name] = topic
@@ -155,7 +151,7 @@ class Messenger {
    * @returns {Queue}
    */
   createQueue(name, opts: any = {}) {
-    const queue = new Queue(Messenger.sqs, name, opts, this.config)
+    const queue = new Queue(this.sqs, name, opts, this.config)
     queue.on('error', this.errorHandler)
 
     if (opts.bindTopics || opts.bindTopic) {
