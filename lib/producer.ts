@@ -1,24 +1,24 @@
-import * as Promise from 'bluebird'
+import * as bluebird from 'bluebird'
 import { SQS, SNS } from 'aws-sdk'
+
+import Queue from './queue'
+import Topic from './topic'
 
 class Producer {
   sqs: SQS
   sns: SNS
 
-  constructor(sqs: SQS, sns: SNS) {
+  constructor({ sqs, sns }: { sqs: SQS, sns: SNS }) {
     this.sqs = sqs
     this.sns = sns
   }
 
   /**
    * Send message to topic.
-   * @param {Topic} topic
-   * @param {Object} message
-   * @returns {Promise}
    */
-  sendTopic(topic, message: any) {
+  async sendTopic<T = any>(topic: Topic, message: T): Promise<SNS.Types.PublishResponse> {
     const encodedMessage = JSON.stringify(message)
-    return new Promise((resolve) => {
+    return new bluebird((resolve) => {
       if (topic.isReady) {
         resolve()
       } else {
@@ -30,8 +30,7 @@ class Producer {
           TopicArn: topic.arn,
           Message: encodedMessage,
         }, (err, result) => {
-          if (err) reject(err)
-          else resolve(result)
+          err ? reject(err) : resolve(result)
         })
       })
     })
@@ -39,31 +38,25 @@ class Producer {
 
   /**
    * Send message to queue
-   * @param {Queue} queue
-   * @param {Object} message
-   * @param {Object} options
-   * @param {Number} options.DelaySeconds - 0 to 900
-   * @returns {Promise}
    */
-  sendQueue(queue, message: any, options?) {
+  async sendQueue<T = any>(queue: Queue, message: T, options?: SQS.SendMessageRequest): Promise<SQS.Types.SendMessageResult> {
     const encodedMessage = JSON.stringify(message)
-    return new Promise((resolve) => {
+    return new bluebird((resolve) => {
       if (queue.isReady) {
         resolve()
       } else {
         queue.on('ready', () => resolve())
       }
-    }).timeout(2000).then(() =>
-      new Promise((resolve, reject) => {
+    }).timeout(2000).then(() => {
+      return new Promise((resolve, reject) => {
         this.sqs.sendMessage(Object.assign({
           QueueUrl: queue.queueUrl,
           MessageBody: encodedMessage,
         }, options), (err, result) => {
-          if (err) reject(err)
-          else resolve(result)
+          err ? reject(err) : resolve(result)
         })
       })
-      )
+    })
   }
 }
 

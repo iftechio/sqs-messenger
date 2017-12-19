@@ -3,6 +3,8 @@ import * as sinon from 'sinon'
 import { SQS, SNS } from 'aws-sdk'
 
 import Producer from '../lib/producer'
+import Topic from '../lib/topic'
+import Queue from '../lib/queue'
 
 const sqs = new SQS({
   region: 'cn-north-1',
@@ -14,7 +16,7 @@ const sns = new SNS({
   apiVersion: '2010-03-31',
 })
 
-const producer = new Producer(sqs, sns)
+const producer = new Producer({ sqs, sns })
 
 test('should send to topic', t => {
   const mock = t.context.sandbox.mock(sns).expects('publish')
@@ -24,7 +26,7 @@ test('should send to topic', t => {
   return producer.sendTopic({
     isReady: true,
     arn: 'arn:sns:test',
-  }, { text: 'abc' }).then(() => {
+  } as Topic, { text: 'abc' }).then(() => {
     mock.verify()
     t.deepEqual(mock.firstCall.args[0], {
       TopicArn: 'arn:sns:test',
@@ -42,7 +44,7 @@ test('should send to queue', t => {
     isReady: true,
     arn: 'arn:sqs:test',
     queueUrl: 'http://sqs.test.com/q1',
-  }, { text: 'abc' }).then(() => {
+  } as Queue, { text: 'abc' }).then(() => {
     mock.verify()
     t.deepEqual(mock.firstCall.args[0], {
       QueueUrl: 'http://sqs.test.com/q1',

@@ -1,5 +1,5 @@
 const debug = require('debug')('sqs-messenger:queue')
-import * as Promise from 'bluebird'
+import * as bluebird from 'bluebird'
 import { EventEmitter } from 'events'
 import { SQS } from 'aws-sdk'
 
@@ -49,13 +49,13 @@ class Queue extends EventEmitter {
 
     this._createQueue().then(data => {
       debug('Queue created', data)
-      this.queueUrl = data.QueueUrl
+      this.queueUrl = data.QueueUrl!
       this.isReady = true
       this.emit('ready')
     }, error => this.emit('error', error))
   }
 
-  _createQueue() {
+  async _createQueue(): Promise<SQS.Types.CreateQueueResult> {
     debug(`Creating queue ${this.realName}`)
     const opts = this.opts
     const createParams: SQS.Types.CreateQueueRequest = opts.isDeadLetterQueue
@@ -82,7 +82,7 @@ class Queue extends EventEmitter {
         },
       }
 
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       if (opts.withDeadLetter) {
         const deadLetterQueueName = `${this.name}-dl`
 
@@ -99,21 +99,20 @@ class Queue extends EventEmitter {
       } else {
         resolve()
       }
-    }).then(() => {
-      return new Promise((resolve, reject) => {
-        this.sqs.createQueue(createParams, (err, data) => {
-          if (err) {
-            if (err.name === 'QueueAlreadyExists') {
-              console.warn('QueueAlreadyExists', err.stack)
-              // ignore QueueAlreadyExists error
-              resolve({ QueueUrl: this.config.queueUrlPrefix + createParams.QueueName })
-              return
-            }
-            reject(err)
-          } else {
-            resolve(data)
+    })
+    return new Promise<SQS.Types.CreateQueueResult>((resolve, reject) => {
+      this.sqs.createQueue(createParams, (err, data) => {
+        if (err) {
+          if (err.name === 'QueueAlreadyExists') {
+            console.warn('QueueAlreadyExists', err.stack)
+            // ignore QueueAlreadyExists error
+            resolve({ QueueUrl: this.config.queueUrlPrefix + createParams.QueueName })
+            return
           }
-        })
+          reject(err)
+        } else {
+          resolve(data)
+        }
       })
     })
   }
@@ -133,12 +132,9 @@ class Queue extends EventEmitter {
 
   /**
    * Gracefully shutdown each consumer within `timeout`
-   *
-   * @param {Number} timeout
-   * @returns {Promise}
    */
-  shutdown(timeout) {
-    return Promise.map(this.consumers, (consumer) => {
+  async shutdown(timeout): Promise<void> {
+    return bluebird.map(this.consumers, (consumer) => {
       return consumer.shutdown(timeout)
     })
   }

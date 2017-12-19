@@ -6,10 +6,13 @@ import Producer from './producer'
 import Queue from './queue'
 import Topic from './topic'
 
-const TYPES = {
-  TOPIC: 'topic',
-  QUEUE: 'queue',
-}
+const TYPES: {
+  TOPIC: 'topic'
+  QUEUE: 'queue'
+} = {
+    TOPIC: 'topic',
+    QUEUE: 'queue',
+  }
 
 /**
  * Default error handler, print error to console.
@@ -41,7 +44,7 @@ class Messenger {
     this.sqs = sqs
     this.sns = sns
     this.config = new Config(conf)
-    this.producer = new Producer(sqs, sns)
+    this.producer = new Producer({ sqs, sns })
     this.errorHandler = conf.errorHandler || loggingErrorHandler
     this.sendTopicMessage = this.send.bind(this, TYPES.TOPIC)
     this.sendQueueMessage = this.send.bind(this, TYPES.QUEUE)
@@ -56,10 +59,12 @@ class Messenger {
    * @param {Number} [opts.consumers=1]
    * @param {Boolean} [opts.batchHandle=false]
    */
-  on(queue, handler, opts: any = {}) {
-    if (typeof queue === 'string') {
-      queue = this.queueMap[queue]
-    }
+  on(queueName: string, handler, opts: {
+    batchSize?: number
+    consumers?: number
+    batchHandle?: boolean
+  } = {}) {
+    const queue = this.queueMap[queueName]
     if (!queue) {
       throw new Error('Queue not found')
     }
@@ -75,15 +80,6 @@ class Messenger {
   }
 
   /**
-   * Register error handler.
-   *
-   * @param {Function} errHandler
-   */
-  onError(errHandler) {
-    this.errorHandler = errHandler
-  }
-
-  /**
    * Send message to specific topic or queue, messages will be dropped
    * if SQS queue or SNS topic in the process of declaring.
    *
@@ -94,7 +90,7 @@ class Messenger {
    * @param {Number} options.DelaySeconds
    * @returns {Promise}
    */
-  send(type, key, msg, options?) {
+  send<T = any>(type: 'topic' | 'queue', key: string, msg: T | any, options?: SQS.SendMessageRequest) {
     if (arguments.length < 2) {
       return Promise.reject(new Error('Invalid parameter list'))
     }

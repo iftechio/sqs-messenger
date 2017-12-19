@@ -16,11 +16,10 @@ const sqsMessenger = new SqsMessenger({ sqs, sns }, {
   sqsArnPrefix: 'arn:aws-cn:sqs:cn-north-1:123456789012:',
   queueUrlPrefix: 'http://sqs.cn-north-1.amazonaws.com.cn/123456789012/',
   resourceNamePrefix: 'test_',
-})
-
-sqsMessenger.onError(err => {
-  console.log('Error handled')
-  console.error(err.stack)
+  errorHandler: err => {
+    console.log('Error handled')
+    console.error(err.stack)
+  }
 })
 
 const myTopic = sqsMessenger.createTopic('myTopic')
