@@ -5,7 +5,6 @@ import * as config from './config'
 import Producer from './producer'
 import Queue from './queue'
 import Topic from './topic'
-import * as jsonProtocol from './protocols/jsonProtocol'
 
 const TYPES = {
   TOPIC: 'topic',
@@ -33,7 +32,6 @@ class Messenger {
     region: 'cn-north-1',
     apiVersion: '2010-03-31',
   })
-  protocol: any
   producer: Producer
   errorHandler: (...args: any[]) => void
   sendTopicMessage: Function
@@ -47,14 +45,12 @@ class Messenger {
    * @param {String} configs.arnPrefix
    * @param {String} configs.queueUrlPrefix
    * @param {String} [configs.resourceNamePrefix=""]
-   * @param {Object} [configs.protocol=jsonProtocol]
    * @param {Function} [configs.errorHandler=loggingErrorHandler]
    */
   constructor(configs) {
     config.set(configs || {})
 
-    this.protocol = configs.protocol || jsonProtocol
-    this.producer = new Producer(Messenger.sqs, Messenger.sns, this.protocol)
+    this.producer = new Producer(Messenger.sqs, Messenger.sns)
     this.errorHandler = configs.errorHandler || loggingErrorHandler
 
     this.sendTopicMessage = this.send.bind(this, TYPES.TOPIC)
@@ -77,7 +73,6 @@ class Messenger {
     if (!queue) {
       throw new Error('Queue not found')
     }
-    opts.protocol = this.protocol
 
     let consumers: any[] = []
     const consumersNum = opts.consumers || 1

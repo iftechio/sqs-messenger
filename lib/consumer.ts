@@ -1,8 +1,8 @@
 const debug = require('debug')('sqs-messenger:consumer')
 import * as Promise from 'bluebird'
 import { EventEmitter } from 'events'
+import { SQS } from 'aws-sdk'
 
-import * as jsonProtocol from './protocols/jsonProtocol'
 import Queue from './queue'
 
 class Consumer extends EventEmitter {
@@ -11,7 +11,6 @@ class Consumer extends EventEmitter {
   batchSize: number
   visibilityTimeout: number
   batchHandle: boolean
-  protocol: any
   handler: any
   processingMessagesPromise: any
 
@@ -21,7 +20,6 @@ class Consumer extends EventEmitter {
    * @param {Number} [opts.batchSize=10]
    * @param {Number} [opts.visibilityTimeout=30]
    * @param {Boolean} [opts.batchHandle=false]
-   * @param {Object} [opts.protocol=jsonProtocol]
  */
   constructor(queue: Queue, handler, opts: any = {}) {
     super()
@@ -29,7 +27,6 @@ class Consumer extends EventEmitter {
     this.batchSize = opts.batchSize || 10
     this.visibilityTimeout = opts.visibilityTimeout || 30
     this.batchHandle = !!opts.batchHandle
-    this.protocol = opts.protocol || jsonProtocol
     this.running = false
     this.handler = handler
     this.processingMessagesPromise = null
@@ -63,7 +60,7 @@ class Consumer extends EventEmitter {
   /**
    * Handler response which contains a batch of messages, dispatch then to consumer handler.
    */
-  _handleSqsResponse(err, response) {
+  _handleSqsResponse(err: Error, response: SQS.ReceiveMessageResult) {
     if (err) {
       this.emit('error', 'Error receiving sqs message', err)
     }
@@ -80,9 +77,9 @@ class Consumer extends EventEmitter {
   /**
    * Call consumer handler, this function never reject, to make the polling loop running forever.
    */
-  _processMessage(messages) {
+  _processMessage(messages: SQS.MessageList) {
     debug('Processing message, %o', messages)
-    const decodedMessages = messages.map(message => this.protocol.decode(message))
+    const decodedMessages = messages.map(message => message.Body && JSON.parse(message.Body))
 
     return (this.batchHandle ?
       new Promise((resolve, reject) => {

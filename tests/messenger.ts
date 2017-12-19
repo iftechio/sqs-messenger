@@ -16,11 +16,11 @@ test.beforeEach(t => {
 })
 
 test.serial('create queue', t => {
-  const sqsMessenger = new Messenger({
+  const messenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
-  const queue = sqsMessenger.createQueue('myQueue')
+  const queue = messenger.createQueue('myQueue')
   t.true(queue instanceof Queue)
   t.pass()
 })
@@ -30,14 +30,14 @@ test.cb.serial('register one consumer', t => {
     Messages: [{ Body: '{}' }]
   })
 
-  const sqsMessenger = new Messenger({
+  const messenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
 
-  sqsMessenger.createQueue('myQueue')
+  messenger.createQueue('myQueue')
 
-  const consumer = sqsMessenger.on('myQueue', (message, done) => {
+  const consumer = messenger.on('myQueue', (message, done) => {
     done()
     t.end()
   })
@@ -45,7 +45,7 @@ test.cb.serial('register one consumer', t => {
   t.true(consumer instanceof Consumer)
 })
 
-test.serial.cb.skip('register two consumers', t => {
+test.cb.serial.skip('register two consumers', t => {
   const receiveMessage = t.context.sandbox.stub(Messenger.sqs, 'receiveMessage')
   receiveMessage.onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{"n": 1}' }]
@@ -54,15 +54,15 @@ test.serial.cb.skip('register two consumers', t => {
     Messages: [{ Body: '{"n": 2}' }]
   })
 
-  const sqsMessenger = new Messenger({
+  const messenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
 
-  sqsMessenger.createQueue('myQueue')
+  messenger.createQueue('myQueue')
 
   let numbers: any[] = []
-  const consumers = sqsMessenger.on('myQueue', (message, done) => {
+  const consumers = messenger.on('myQueue', (message, done) => {
     numbers.push(message.n)
     setTimeout(() => {
       done()
@@ -81,12 +81,12 @@ test.serial.cb.skip('register two consumers', t => {
 
 test.cb.serial('bind topic', t => {
   const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
-  const sqsMessenger = new Messenger({
+  const messenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
   const topic = new Topic(Messenger.sns, 'topic')
-  const quene = sqsMessenger.createQueue('myQueue', {
+  const quene = messenger.createQueue('myQueue', {
     bindTopic: topic,
   })
   quene.on('ready', () => {
@@ -99,14 +99,14 @@ test.cb.serial('bind topic', t => {
 
 test.cb.serial('bind topics', t => {
   const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
-  const sqsMessenger = new Messenger({
+  const messenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
   const topic1 = new Topic(Messenger.sns, 'topic1')
   const topic2 = new Topic(Messenger.sns, 'topic2')
   const topic3 = new Topic(Messenger.sns, 'topic3')
-  const quene = sqsMessenger.createQueue('myQueue', {
+  const quene = messenger.createQueue('myQueue', {
     bindTopics: [topic1, topic2, topic3],
   })
   quene.on('ready', () => {
@@ -120,10 +120,10 @@ test.cb.serial('bind topics', t => {
 })
 
 test.cb.serial('send empty queue', t => {
-  const sqsMessenger = new Messenger({
+  const messenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
-  t.throws(() => sqsMessenger.sendQueueMessage('foo', {}), 'Queue[foo] not found')
+  t.throws(() => messenger.sendQueueMessage('foo', {}), 'Queue[foo] not found')
   t.end()
 })

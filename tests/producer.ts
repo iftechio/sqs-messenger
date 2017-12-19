@@ -3,7 +3,6 @@ import * as sinon from 'sinon'
 import { SQS, SNS } from 'aws-sdk'
 
 import Producer from '../lib/producer'
-import * as protocol from '../lib/protocols/jsonProtocol'
 
 const sqs = new SQS({
   region: 'cn-north-1',
@@ -15,7 +14,7 @@ const sns = new SNS({
   apiVersion: '2010-03-31',
 })
 
-const producer = new Producer(sqs, sns, protocol)
+const producer = new Producer(sqs, sns)
 
 test('should send to topic', t => {
   const mock = t.context.sandbox.mock(sns).expects('publish')

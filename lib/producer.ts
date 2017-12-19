@@ -4,12 +4,10 @@ import { SQS, SNS } from 'aws-sdk'
 class Producer {
   sqs: SQS
   sns: SNS
-  protocol: any
 
-  constructor(sqs: SQS, sns: SNS, protocol) {
+  constructor(sqs: SQS, sns: SNS) {
     this.sqs = sqs
     this.sns = sns
-    this.protocol = protocol
   }
 
   /**
@@ -18,8 +16,8 @@ class Producer {
    * @param {Object} message
    * @returns {Promise}
    */
-  sendTopic(topic, message) {
-    const encodedMessage = this.protocol.encode(message)
+  sendTopic(topic, message: any) {
+    const encodedMessage = JSON.stringify(message)
     return new Promise((resolve) => {
       if (topic.isReady) {
         resolve()
@@ -47,8 +45,8 @@ class Producer {
    * @param {Number} options.DelaySeconds - 0 to 900
    * @returns {Promise}
    */
-  sendQueue(queue, message, options?) {
-    const encodedMessage = this.protocol.encode(message)
+  sendQueue(queue, message: any, options?) {
+    const encodedMessage = JSON.stringify(message)
     return new Promise((resolve) => {
       if (queue.isReady) {
         resolve()
