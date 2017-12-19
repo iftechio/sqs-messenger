@@ -1,10 +1,10 @@
-const clients = require('./clients')
-const Promise = require('bluebird')
-const EventEmitter = require('events').EventEmitter
-const util = require('util')
 const debug = require('debug')('sqs-messenger:topic')
+import * as Promise from 'bluebird'
+import { EventEmitter } from 'events'
+import * as util from 'util'
 
-const config = require('./config')
+import * as clients from './clients'
+import * as config from './config'
 
 function create(name) {
   debug(`Create topic ${name}`)
@@ -78,4 +78,4 @@ Topic.prototype.subscribe = function (queue) {
     )
 }
 
-module.exports = Topic
+export default Topic

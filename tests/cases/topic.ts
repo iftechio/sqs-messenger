@@ -1,19 +1,18 @@
-const Promise = require('bluebird')
-const sinon = require('sinon')
-const test = require('../_init')
+import test from '../_init'
+import * as Promise from 'bluebird'
+import * as sinon from 'sinon'
 
-const sns = require('../../lib/clients').sns
-const sqs = require('../../lib/clients').sqs
-const Topic = require('../../lib/topic')
-const Queue = require('../../lib/queue')
-const config = require('../../lib/config')
+import { sns, sqs } from '../../lib/clients'
+import Topic from '../../lib/topic'
+import Queue from '../../lib/queue'
+import * as config from '../../lib/config'
 
 test.before(() => {
   sinon.stub(config, 'getResourceNamePrefix').returns('test_')
   sinon.stub(config, 'getSqsArnPrefix').returns('arn:sqs:test:')
 })
 
-test.serial.cb('should create topic', t => {
+test.cb.serial('should create topic', t => {
   const mock = t.context.sandbox.mock(sns).expects('createTopic').once()
     .withArgs({ Name: 'test_t1' })
     .callsArgWithAsync(1, null, { TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })

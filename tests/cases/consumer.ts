@@ -1,17 +1,17 @@
-const test = require('../_init')
-const sinon = require('sinon')
-const Promise = require('bluebird')
+import test from '../_init'
+import * as sinon from 'sinon'
+import * as Promise from 'bluebird'
 
-const sqs = require('../../lib/clients').sqs
-const Queue = require('../../lib/queue')
-const config = require('../../lib/config')
+import { sqs } from '../../lib/clients'
+import Queue from '../../lib/queue'
+import * as config from '../../lib/config'
 
 test.before(t => {
   sinon.stub(sqs, 'createQueue')
     .callsArgWithAsync(1, null, { QueueUrl: 'http://test:c' })
 })
 
-test.serial.cb('should receive message', t => {
+test.cb.serial('should receive message', t => {
   const c1 = new Queue('c1')
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
@@ -24,7 +24,7 @@ test.serial.cb('should receive message', t => {
   })
 })
 
-test.serial.cb('should delete message on done', t => {
+test.cb.serial('should delete message on done', t => {
   const c2 = new Queue('c2')
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
@@ -70,7 +70,7 @@ test.serial('should handle consumer handler timeout', t => {
   }).timeout(2000)
 })
 
-test.serial.cb('should delete batch messages on done', t => {
+test.cb.serial('should delete batch messages on done', t => {
   const c4 = new Queue('c4')
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()

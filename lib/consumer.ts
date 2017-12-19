@@ -1,10 +1,10 @@
 const debug = require('debug')('sqs-messenger:consumer')
-const clients = require('./clients')
-const Promise = require('bluebird')
-const EventEmitter = require('events').EventEmitter
-const util = require('util')
+import * as Promise from 'bluebird'
+import { EventEmitter } from 'events'
+import * as util from 'util'
 
-const jsonProtocol = require('./protocols/jsonProtocol')
+import * as clients from './clients'
+import * as jsonProtocol from './protocols/jsonProtocol'
 
 /**
  * @param {Queue} queue
@@ -187,4 +187,4 @@ Consumer.prototype.shutdown = function (timeout) {
     .catch(err => this.emit('error', err))
 }
 
-module.exports = Consumer
+export default Consumer

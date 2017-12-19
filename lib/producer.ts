@@ -1,5 +1,5 @@
-const Promise = require('bluebird')
-const clients = require('./clients')
+import * as Promise from 'bluebird'
+import * as clients from './clients'
 
 function Producer(protocol) {
   this.protocol = protocol
@@ -61,4 +61,4 @@ Producer.prototype.sendQueue = function (queue, message, options) {
     )
 }
 
-module.exports = Producer
+export default Producer

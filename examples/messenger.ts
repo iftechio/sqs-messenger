@@ -1,15 +1,16 @@
-const AWS = require('aws-sdk')
-const SqsMessenger = require('../lib/messenger')
+import * as AWS from 'aws-sdk'
+import SqsMessenger from '../lib/messenger'
 
 const sqs = new AWS.SQS({
   region: 'cn-north-1',
-  sqs: '2012-11-05',
+  apiVersion: '2012-11-05',
 })
 
 const sns = new AWS.SNS({
   region: 'cn-north-1',
-  sns: '2010-03-31',
+  apiVersion: '2010-03-31',
 })
+
 const sqsMessenger = new SqsMessenger({ sqs, sns }, {
   snsArnPrefix: 'arn:aws-cn:sns:cn-north-1:123456789012:',
   sqsArnPrefix: 'arn:aws-cn:sqs:cn-north-1:123456789012:',

@@ -1,13 +1,12 @@
-const sinon = require('sinon')
-const test = require('../_init')
-const Promise = require('bluebird')
+import test from '../_init'
+import * as sinon from 'sinon'
+import * as Promise from 'bluebird'
 
-const sqs = require('../../lib/clients').sqs
-const sns = require('../../lib/clients').sns
-const SqsMessenger = require('../../lib/messenger')
-const Queue = require('../../lib/queue')
-const Consumer = require('../../lib/consumer')
-const Topic = require('../../lib/topic')
+import { sqs, sns } from '../../lib/clients'
+import SqsMessenger from '../../lib/messenger'
+import Queue from '../../lib/queue'
+import Consumer from '../../lib/consumer'
+import Topic from '../../lib/topic'
 
 test.beforeEach(t => {
   t.context.sandbox.stub(sqs, 'createQueue').callsArgWithAsync(1, null, {
@@ -27,7 +26,7 @@ test.serial('create queue', t => {
   t.pass()
 })
 
-test.serial.cb('register one consumer', t => {
+test.cb.serial('register one consumer', t => {
   t.context.sandbox.stub(sqs, 'receiveMessage').onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{}' }]
   })
@@ -81,7 +80,7 @@ test.serial.cb.skip('register two consumers', t => {
   })
 })
 
-test.serial.cb('bind topic', t => {
+test.cb.serial('bind topic', t => {
   const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
   const sqsMessenger = new SqsMessenger({ sqs }, {
     sqsArnPrefix: 'arn:sqs:test:',
@@ -99,7 +98,7 @@ test.serial.cb('bind topic', t => {
   })
 })
 
-test.serial.cb('bind topics', t => {
+test.cb.serial('bind topics', t => {
   const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
   const sqsMessenger = new SqsMessenger({ sqs }, {
     sqsArnPrefix: 'arn:sqs:test:',
@@ -121,7 +120,7 @@ test.serial.cb('bind topics', t => {
   })
 })
 
-test.serial.cb('send empty queue', t => {
+test.cb.serial('send empty queue', t => {
   const sqsMessenger = new SqsMessenger({ sqs }, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'

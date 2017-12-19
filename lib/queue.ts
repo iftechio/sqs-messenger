@@ -1,11 +1,11 @@
 const debug = require('debug')('sqs-messenger:queue')
-const clients = require('./clients')
-const Promise = require('bluebird')
-const EventEmitter = require('events').EventEmitter
-const util = require('util')
+import * as Promise from 'bluebird'
+import { EventEmitter } from 'events'
+import * as util from 'util'
 
-const config = require('./config')
-const Consumer = require('./consumer')
+import * as clients from './clients'
+import * as config from './config'
+import Consumer from './consumer'
 
 /**
  * Construct an SQS queue.
@@ -18,8 +18,7 @@ const Consumer = require('./consumer')
  * @param {Number} [opts.maxReceiveCount=5]
  * @constructor
  */
-function Queue(name, opts) {
-  opts = opts || {}
+function Queue(name, opts: any = {}) {
   this.opts = {
     withDeadLetter: (typeof opts.withDeadLetter === 'boolean') ? opts.withDeadLetter : false,
     visibilityTimeout: (opts.visibilityTimeout || 30).toString(),
@@ -46,7 +45,7 @@ util.inherits(Queue, EventEmitter)
 Queue.prototype._createQueue = function () {
   debug(`Creating queue ${this.realName}`)
   const opts = this.opts
-  const createParams = opts.isDeadLetterQueue ? { QueueName: this.realName } : {
+  const createParams: any = opts.isDeadLetterQueue ? { QueueName: this.realName } : {
     QueueName: this.realName,
     Attributes: {
       MaximumMessageSize: opts.maximumMessageSize,
@@ -129,4 +128,4 @@ Queue.prototype.shutdown = function (timeout) {
 }
 
 
-module.exports = Queue
+export default Queue

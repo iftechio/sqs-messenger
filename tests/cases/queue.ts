@@ -1,10 +1,10 @@
-const Promise = require('bluebird')
-const sinon = require('sinon')
-const test = require('../_init')
+import test from '../_init'
+import * as Promise from 'bluebird'
+import * as sinon from 'sinon'
 
-const sqs = require('../../lib/clients').sqs
-const Queue = require('../../lib/queue')
-const config = require('../../lib/config')
+import { sqs } from '../../lib/clients'
+import Queue from '../../lib/queue'
+import * as config from '../../lib/config'
 
 test.before(t => {
   sinon.stub(config, 'getResourceNamePrefix').returns('test_')

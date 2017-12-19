@@ -1,11 +1,11 @@
-const Promise = require('bluebird')
+import * as Promise from 'bluebird'
 
-const clientsHolder = require('./clients')
-const config = require('./config')
-const Producer = require('./producer')
-const Queue = require('./queue')
-const Topic = require('./topic')
-const jsonProtocol = require('./protocols/jsonProtocol')
+import * as clientsHolder from './clients'
+import * as config from './config'
+import Producer from './producer'
+import Queue from './queue'
+import Topic from './topic'
+import * as jsonProtocol from './protocols/jsonProtocol'
 
 const TYPES = {
   TOPIC: 'topic',
@@ -70,7 +70,7 @@ Messenger.prototype.on = function (queue, handler, opts) {
   opts = opts || {}
   opts.protocol = this.protocol
 
-  let consumers = []
+  let consumers: any[] = []
   const consumersNum = opts.consumers || 1
   for (let i = 0; i < consumersNum; i++) {
     const consumer = queue.onMessage(handler, opts)
@@ -189,4 +189,4 @@ Messenger.prototype.shutdown = function (timeout) {
   })
 }
 
-module.exports = Messenger
+export default Messenger
