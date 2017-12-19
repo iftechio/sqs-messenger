@@ -2,22 +2,21 @@ import test from './_init'
 import * as sinon from 'sinon'
 import * as Promise from 'bluebird'
 
-import { sqs, sns } from '../lib/clients'
-import SqsMessenger from '../lib/messenger'
+import Messenger from '../lib/messenger'
 import Queue from '../lib/queue'
 import Consumer from '../lib/consumer'
 import Topic from '../lib/topic'
 
 test.beforeEach(t => {
-  t.context.sandbox.stub(sqs, 'createQueue').callsArgWithAsync(1, null, {
+  t.context.sandbox.stub(Messenger.sqs, 'createQueue').callsArgWithAsync(1, null, {
     QueueUrl: 'http://test:c'
   })
-  t.context.sandbox.stub(sqs, 'deleteMessage').callsFake((params, callback) => callback())
-  t.context.sandbox.stub(sns, 'createTopic').callsArgWithAsync(1, null, { TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
+  t.context.sandbox.stub(Messenger.sqs, 'deleteMessage').callsFake((params, callback) => callback())
+  t.context.sandbox.stub(Messenger.sns, 'createTopic').callsArgWithAsync(1, null, { TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
 })
 
 test.serial('create queue', t => {
-  const sqsMessenger = new SqsMessenger({ sqs }, {
+  const sqsMessenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
@@ -27,11 +26,11 @@ test.serial('create queue', t => {
 })
 
 test.cb.serial('register one consumer', t => {
-  t.context.sandbox.stub(sqs, 'receiveMessage').onFirstCall().callsArgWithAsync(1, null, {
+  t.context.sandbox.stub(Messenger.sqs, 'receiveMessage').onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{}' }]
   })
 
-  const sqsMessenger = new SqsMessenger({ sqs }, {
+  const sqsMessenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
@@ -47,7 +46,7 @@ test.cb.serial('register one consumer', t => {
 })
 
 test.serial.cb.skip('register two consumers', t => {
-  const receiveMessage = t.context.sandbox.stub(sqs, 'receiveMessage')
+  const receiveMessage = t.context.sandbox.stub(Messenger.sqs, 'receiveMessage')
   receiveMessage.onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{"n": 1}' }]
   })
@@ -55,7 +54,7 @@ test.serial.cb.skip('register two consumers', t => {
     Messages: [{ Body: '{"n": 2}' }]
   })
 
-  const sqsMessenger = new SqsMessenger({ sqs }, {
+  const sqsMessenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
@@ -82,11 +81,11 @@ test.serial.cb.skip('register two consumers', t => {
 
 test.cb.serial('bind topic', t => {
   const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
-  const sqsMessenger = new SqsMessenger({ sqs }, {
+  const sqsMessenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
-  const topic = new Topic('topic')
+  const topic = new Topic(Messenger.sns, 'topic')
   const quene = sqsMessenger.createQueue('myQueue', {
     bindTopic: topic,
   })
@@ -100,13 +99,13 @@ test.cb.serial('bind topic', t => {
 
 test.cb.serial('bind topics', t => {
   const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake(() => { })
-  const sqsMessenger = new SqsMessenger({ sqs }, {
+  const sqsMessenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
-  const topic1 = new Topic('topic1')
-  const topic2 = new Topic('topic2')
-  const topic3 = new Topic('topic3')
+  const topic1 = new Topic(Messenger.sns, 'topic1')
+  const topic2 = new Topic(Messenger.sns, 'topic2')
+  const topic3 = new Topic(Messenger.sns, 'topic3')
   const quene = sqsMessenger.createQueue('myQueue', {
     bindTopics: [topic1, topic2, topic3],
   })
@@ -121,7 +120,7 @@ test.cb.serial('bind topics', t => {
 })
 
 test.cb.serial('send empty queue', t => {
-  const sqsMessenger = new SqsMessenger({ sqs }, {
+  const sqsMessenger = new Messenger({
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })

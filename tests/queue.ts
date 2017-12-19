@@ -1,10 +1,15 @@
 import test from './_init'
 import * as Promise from 'bluebird'
 import * as sinon from 'sinon'
+import { SQS } from 'aws-sdk'
 
-import { sqs } from '../lib/clients'
 import Queue from '../lib/queue'
 import * as config from '../lib/config'
+
+const sqs = new SQS({
+  region: 'cn-north-1',
+  apiVersion: '2012-11-05',
+})
 
 test.before(t => {
   sinon.stub(config, 'getResourceNamePrefix').returns('test_')
@@ -18,7 +23,7 @@ test.serial('should create queue', t => {
       QueueUrl: 'http://test_q1',
     })
 
-  const q1 = new Queue('q1')
+  const q1 = new Queue(sqs, 'q1')
   return Promise.delay(200).then(() => {
     mock.verify()
     const expectPolicy = JSON.stringify({
@@ -52,7 +57,7 @@ test.serial('should create deadletter queue', t => {
       QueueUrl: 'http://test_q1',
     })
 
-  const q2 = new Queue('q2', { withDeadLetter: true })
+  const q2 = new Queue(sqs, 'q2', { withDeadLetter: true })
   return Promise.delay(200).then(() => {
     mock.verify()
     t.deepEqual(mock.firstCall.args[0], {
@@ -95,7 +100,7 @@ function shutdownMacro(t, input, expected) {
   })
   sandbox.stub(sqs, 'deleteMessage').callsFake((params, callback) => callback())
 
-  const queue = new Queue('q')
+  const queue = new Queue(sqs, 'q')
   return Promise.delay(200).then(() => {
     const spy = sinon.spy()
     const consumer = queue.onMessage((message, done) => {

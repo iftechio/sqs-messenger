@@ -1,17 +1,6 @@
-import * as AWS from 'aws-sdk'
 import SqsMessenger from '../lib/messenger'
 
-const sqs = new AWS.SQS({
-  region: 'cn-north-1',
-  apiVersion: '2012-11-05',
-})
-
-const sns = new AWS.SNS({
-  region: 'cn-north-1',
-  apiVersion: '2010-03-31',
-})
-
-const sqsMessenger = new SqsMessenger({ sqs, sns }, {
+const sqsMessenger = new SqsMessenger({
   snsArnPrefix: 'arn:aws-cn:sns:cn-north-1:123456789012:',
   sqsArnPrefix: 'arn:aws-cn:sqs:cn-north-1:123456789012:',
   queueUrlPrefix: 'http://sqs.cn-north-1.amazonaws.com.cn/123456789012/',

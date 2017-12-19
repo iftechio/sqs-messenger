@@ -1,48 +1,43 @@
 const debug = require('debug')('sqs-messenger:topic')
 import * as Promise from 'bluebird'
 import { EventEmitter } from 'events'
-import * as util from 'util'
+import { SNS } from 'aws-sdk'
 
-import * as clients from './clients'
 import * as config from './config'
+import Queue from './queue'
 
-function create(name) {
-  debug(`Create topic ${name}`)
-  return new Promise((resolve, reject) => {
-    clients.sns.createTopic({ Name: name }, (err, data) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(data)
-      }
-    })
-  })
-}
 
 class Topic extends EventEmitter {
   isReady: boolean
   name: string
   realName: string
   arn: string
+  sns: SNS
 
-  constructor(name) {
+  constructor(sns: SNS, name: string) {
     super()
+    this.sns = sns
     this.name = name
     this.realName = config.getResourceNamePrefix() + name
     this.isReady = false
 
-    create(this.realName).then(data => {
-      debug('topic created', data)
-      this.arn = data.TopicArn
-      this.isReady = true
-      this.emit('ready')
-    }, error => this.emit('error', error))
+    debug(`Create topic ${this.name}`)
+    this.sns.createTopic({ Name: this.realName }, (err, data) => {
+      if (err) {
+        this.emit('error', err)
+      } else {
+        debug('topic created', data)
+        this.arn = data.TopicArn || ''
+        this.isReady = true
+        this.emit('ready')
+      }
+    })
   }
 
   /**
    * Subscribe queue to topic, queue must be declared already.
    */
-  subscribe(queue) {
+  subscribe(queue: Queue) {
     return Promise.resolve().then(() => {
       if (this.isReady) {
         return null
@@ -52,7 +47,7 @@ class Topic extends EventEmitter {
       })
     }).then(() =>
       new Promise((resolve, reject) => {
-        clients.sns.subscribe({
+        this.sns.subscribe({
           Protocol: 'sqs',
           TopicArn: this.arn,
           Endpoint: queue.arn,
@@ -68,7 +63,7 @@ class Topic extends EventEmitter {
       })
       ).then((data) =>
         new Promise((resolve, reject) => {
-          clients.sns.setSubscriptionAttributes({
+          this.sns.setSubscriptionAttributes({
             SubscriptionArn: data.SubscriptionArn,
             AttributeName: 'RawMessageDelivery',
             AttributeValue: 'true',

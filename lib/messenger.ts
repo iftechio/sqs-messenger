@@ -1,6 +1,6 @@
 import * as Promise from 'bluebird'
+import { SQS, SNS } from 'aws-sdk'
 
-import * as clientsHolder from './clients'
 import * as config from './config'
 import Producer from './producer'
 import Queue from './queue'
@@ -25,6 +25,14 @@ function loggingErrorHandler(...args) {
 }
 
 class Messenger {
+  static sqs = new SQS({
+    region: 'cn-north-1',
+    apiVersion: '2012-11-05',
+  })
+  static sns = new SNS({
+    region: 'cn-north-1',
+    apiVersion: '2010-03-31',
+  })
   protocol: any
   producer: Producer
   errorHandler: (...args: any[]) => void
@@ -41,16 +49,12 @@ class Messenger {
    * @param {String} [configs.resourceNamePrefix=""]
    * @param {Object} [configs.protocol=jsonProtocol]
    * @param {Function} [configs.errorHandler=loggingErrorHandler]
- */
-  constructor(clients, configs) {
-    if (!clients.sqs) {
-      throw Error('SQS client required')
-    }
-    clientsHolder.set(clients)
+   */
+  constructor(configs) {
     config.set(configs || {})
 
     this.protocol = configs.protocol || jsonProtocol
-    this.producer = new Producer(this.protocol)
+    this.producer = new Producer(Messenger.sqs, Messenger.sns, this.protocol)
     this.errorHandler = configs.errorHandler || loggingErrorHandler
 
     this.sendTopicMessage = this.send.bind(this, TYPES.TOPIC)
@@ -140,7 +144,7 @@ class Messenger {
    * @returns {Topic}
    */
   createTopic(name) {
-    const topic = new Topic(name)
+    const topic = new Topic(Messenger.sns, name)
     topic.on('error', this.errorHandler)
 
     topicMap[name] = topic
@@ -162,7 +166,7 @@ class Messenger {
    * @returns {Queue}
    */
   createQueue(name, opts: any = {}) {
-    const queue = new Queue(name, opts)
+    const queue = new Queue(Messenger.sqs, name, opts)
     queue.on('error', this.errorHandler)
 
     if (opts.bindTopics || opts.bindTopic) {

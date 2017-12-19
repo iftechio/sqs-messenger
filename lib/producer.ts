@@ -1,10 +1,14 @@
 import * as Promise from 'bluebird'
-import * as clients from './clients'
+import { SQS, SNS } from 'aws-sdk'
 
 class Producer {
+  sqs: SQS
+  sns: SNS
   protocol: any
 
-  constructor(protocol) {
+  constructor(sqs: SQS, sns: SNS, protocol) {
+    this.sqs = sqs
+    this.sns = sns
     this.protocol = protocol
   }
 
@@ -24,7 +28,7 @@ class Producer {
       }
     }).timeout(2000).then(() =>
       new Promise((resolve, reject) => {
-        clients.sns.publish({
+        this.sns.publish({
           TopicArn: topic.arn,
           Message: encodedMessage,
         }, (err, result) => {
@@ -43,7 +47,7 @@ class Producer {
    * @param {Number} options.DelaySeconds - 0 to 900
    * @returns {Promise}
    */
-  sendQueue(queue, message, options) {
+  sendQueue(queue, message, options?) {
     const encodedMessage = this.protocol.encode(message)
     return new Promise((resolve) => {
       if (queue.isReady) {
@@ -53,7 +57,7 @@ class Producer {
       }
     }).timeout(2000).then(() =>
       new Promise((resolve, reject) => {
-        clients.sqs.sendMessage(Object.assign({
+        this.sqs.sendMessage(Object.assign({
           QueueUrl: queue.queueUrl,
           MessageBody: encodedMessage,
         }, options), (err, result) => {

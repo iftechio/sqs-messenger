@@ -1,13 +1,12 @@
 const debug = require('debug')('sqs-messenger:consumer')
 import * as Promise from 'bluebird'
 import { EventEmitter } from 'events'
-import * as util from 'util'
 
-import * as clients from './clients'
 import * as jsonProtocol from './protocols/jsonProtocol'
+import Queue from './queue'
 
 class Consumer extends EventEmitter {
-  queue: any
+  queue: Queue
   running: boolean
   batchSize: number
   visibilityTimeout: number
@@ -24,7 +23,7 @@ class Consumer extends EventEmitter {
    * @param {Boolean} [opts.batchHandle=false]
    * @param {Object} [opts.protocol=jsonProtocol]
  */
-  constructor(queue, handler, opts: any = {}) {
+  constructor(queue: Queue, handler, opts: any = {}) {
     super()
     this.queue = queue
     this.batchSize = opts.batchSize || 10
@@ -55,7 +54,7 @@ class Consumer extends EventEmitter {
 
     if (this.running) {
       debug('Polling for messages')
-      clients.sqs.receiveMessage(receiveParams, (err, data) => {
+      this.queue.sqs.receiveMessage(receiveParams, (err, data) => {
         this._handleSqsResponse(err, data)
       })
     }
@@ -130,7 +129,7 @@ class Consumer extends EventEmitter {
 
     debug('Deleting message ', message.MessageId)
     return new Promise((resolve, reject) => {
-      clients.sqs.deleteMessage(deleteParams, err => {
+      this.queue.sqs.deleteMessage(deleteParams, err => {
         if (err) return reject(err)
         return resolve()
       })
@@ -144,7 +143,7 @@ class Consumer extends EventEmitter {
     }
 
     return new Promise((resolve, reject) => {
-      clients.sqs.deleteMessageBatch(params, err => {
+      this.queue.sqs.deleteMessageBatch(params, err => {
         if (err) return reject(err)
         return resolve()
       })

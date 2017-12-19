@@ -1,16 +1,15 @@
 const debug = require('debug')('sqs-messenger:queue')
 import * as Promise from 'bluebird'
 import { EventEmitter } from 'events'
-import * as util from 'util'
+import { SQS } from 'aws-sdk'
 
-import * as clients from './clients'
 import * as config from './config'
 import Consumer from './consumer'
 
-
 class Queue extends EventEmitter {
-  opts: any
+  sqs: SQS
   name: string
+  opts: any
   realName: string
   arn: string
   isReady: boolean
@@ -28,8 +27,9 @@ class Queue extends EventEmitter {
    * @param {Number} [opts.isDeadLetterQueue=false]
    * @param {Number} [opts.maxReceiveCount=5]
    */
-  constructor(name, opts: any = {}) {
+  constructor(sqs: SQS, name: string, opts: any = {}) {
     super()
+    this.sqs = sqs
     this.opts = {
       withDeadLetter: (typeof opts.withDeadLetter === 'boolean') ? opts.withDeadLetter : false,
       visibilityTimeout: (opts.visibilityTimeout || 30).toString(),
@@ -80,7 +80,7 @@ class Queue extends EventEmitter {
         opts.deadLetterQueueName = opts.deadLetterQueueName || `${this.name}-dl`
 
         debug('Creating dead letter Queue', opts.deadLetterQueueName)
-        const deadLetterQueue = new Queue(opts.deadLetterQueueName, { isDeadLetterQueue: true })
+        const deadLetterQueue = new Queue(this.sqs, opts.deadLetterQueueName, { isDeadLetterQueue: true })
         this.deadLetterQueue = deadLetterQueue
 
         // set redrive policy on origin queue
@@ -94,7 +94,7 @@ class Queue extends EventEmitter {
       }
     }).then(() =>
       new Promise((resolve, reject) => {
-        clients.sqs.createQueue(createParams, (err, data) => {
+        this.sqs.createQueue(createParams, (err, data) => {
           if (err) {
             if (err.name === 'QueueAlreadyExists') {
               console.warn('QueueAlreadyExists', err.stack)
