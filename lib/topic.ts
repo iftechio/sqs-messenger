@@ -3,9 +3,8 @@ import * as Promise from 'bluebird'
 import { EventEmitter } from 'events'
 import { SNS } from 'aws-sdk'
 
-import * as config from './config'
+import Config from './config'
 import Queue from './queue'
-
 
 class Topic extends EventEmitter {
   isReady: boolean
@@ -14,11 +13,11 @@ class Topic extends EventEmitter {
   arn: string
   sns: SNS
 
-  constructor(sns: SNS, name: string) {
+  constructor(sns: SNS, name: string, config: Config) {
     super()
     this.sns = sns
     this.name = name
-    this.realName = config.getResourceNamePrefix() + name
+    this.realName = config.resourceNamePrefix + name
     this.isReady = false
 
     debug(`Create topic ${this.name}`)

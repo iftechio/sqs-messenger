@@ -1,7 +1,7 @@
 import * as Promise from 'bluebird'
 import { SQS, SNS } from 'aws-sdk'
 
-import * as config from './config'
+import Config from './config'
 import Producer from './producer'
 import Queue from './queue'
 import Topic from './topic'
@@ -10,9 +10,6 @@ const TYPES = {
   TOPIC: 'topic',
   QUEUE: 'queue',
 }
-
-const queueMap = {}
-const topicMap = {}
 
 /**
  * Default error handler, print error to console.
@@ -32,27 +29,24 @@ class Messenger {
     region: 'cn-north-1',
     apiVersion: '2010-03-31',
   })
+  queueMap: { [name: string]: Queue } = {}
+  topicMap: { [name: string]: Topic } = {}
+  config: Config
   producer: Producer
   errorHandler: (...args: any[]) => void
   sendTopicMessage: Function
   sendQueueMessage: Function
 
-  /**
-   * Construct messenger
-   *
-   * @param {Object} clients.sqs - Configured SQS client
-   * @param {Object} clients.sns - Configured SNS client
-   * @param {String} configs.arnPrefix
-   * @param {String} configs.queueUrlPrefix
-   * @param {String} [configs.resourceNamePrefix=""]
-   * @param {Function} [configs.errorHandler=loggingErrorHandler]
-   */
-  constructor(configs) {
-    config.set(configs || {})
-
+  constructor(conf: {
+    snsArnPrefix?: string
+    sqsArnPrefix?: string
+    queueUrlPrefix?: string
+    resourceNamePrefix?: string
+    errorHandler?: (...args: any[]) => void
+  }) {
+    this.config = new Config(conf)
     this.producer = new Producer(Messenger.sqs, Messenger.sns)
-    this.errorHandler = configs.errorHandler || loggingErrorHandler
-
+    this.errorHandler = conf.errorHandler || loggingErrorHandler
     this.sendTopicMessage = this.send.bind(this, TYPES.TOPIC)
     this.sendQueueMessage = this.send.bind(this, TYPES.QUEUE)
   }
@@ -68,7 +62,7 @@ class Messenger {
    */
   on(queue, handler, opts: any = {}) {
     if (typeof queue === 'string') {
-      queue = queueMap[queue]
+      queue = this.queueMap[queue]
     }
     if (!queue) {
       throw new Error('Queue not found')
@@ -116,13 +110,13 @@ class Messenger {
       return this.send(TYPES.QUEUE, type, key, msg)
     }
     if (type === TYPES.TOPIC) {
-      const topic = topicMap[key]
+      const topic = this.topicMap[key]
       if (!topic) {
         throw new Error(`Topic[${key}] not found`)
       }
       return this.producer.sendTopic(topic, msg)
     } else if (type === TYPES.QUEUE) {
-      const queue = queueMap[key]
+      const queue = this.queueMap[key]
       if (!queue) {
         throw new Error(`Queue[${key}] not found`)
       }
@@ -139,10 +133,10 @@ class Messenger {
    * @returns {Topic}
    */
   createTopic(name) {
-    const topic = new Topic(Messenger.sns, name)
+    const topic = new Topic(Messenger.sns, name, this.config)
     topic.on('error', this.errorHandler)
 
-    topicMap[name] = topic
+    this.topicMap[name] = topic
     return topic
   }
 
@@ -161,7 +155,7 @@ class Messenger {
    * @returns {Queue}
    */
   createQueue(name, opts: any = {}) {
-    const queue = new Queue(Messenger.sqs, name, opts)
+    const queue = new Queue(Messenger.sqs, name, opts, this.config)
     queue.on('error', this.errorHandler)
 
     if (opts.bindTopics || opts.bindTopic) {
@@ -175,7 +169,7 @@ class Messenger {
         )
       }
     }
-    queueMap[name] = queue
+    this.queueMap[name] = queue
     return queue
   }
 
@@ -186,7 +180,7 @@ class Messenger {
    * @returns {Promise}
    */
   shutdown(timeout) {
-    const queues = Object.keys(queueMap).map(queueName => queueMap[queueName])
+    const queues = Object.keys(this.queueMap).map(queueName => this.queueMap[queueName])
     return Promise.map(queues, (queue) => {
       return queue.shutdown(timeout)
     })

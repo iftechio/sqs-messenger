@@ -1,30 +1,20 @@
-export let snsArnPrefix = 'arn:sns:test:'
+class Config {
+  snsArnPrefix = 'arn:sns:test:'
+  sqsArnPrefix = 'arn:sqs:test'
+  queueUrlPrefix = 'http://sqs.test/'
+  resourceNamePrefix = ''
 
-export let sqsArnPrefix = 'arn:sqs:test'
-
-export let queueUrlPrefix = 'http://sqs.test/'
-
-export let resourceNamePrefix = ''
-
-export function getSnsArnPrefix() {
-  return snsArnPrefix
+  constructor(conf: {
+    snsArnPrefix?: string
+    sqsArnPrefix?: string
+    queueUrlPrefix?: string
+    resourceNamePrefix?: string
+  } = {}) {
+    this.snsArnPrefix = conf.snsArnPrefix || this.snsArnPrefix
+    this.sqsArnPrefix = conf.sqsArnPrefix || this.sqsArnPrefix
+    this.queueUrlPrefix = conf.queueUrlPrefix || this.queueUrlPrefix
+    this.resourceNamePrefix = conf.resourceNamePrefix || this.resourceNamePrefix
+  }
 }
 
-export function getSqsArnPrefix() {
-  return sqsArnPrefix
-}
-
-export function getQueueUrlPrefix() {
-  return queueUrlPrefix
-}
-
-export function getResourceNamePrefix() {
-  return resourceNamePrefix
-}
-
-export function set(configs) {
-  snsArnPrefix = configs.snsArnPrefix || snsArnPrefix
-  sqsArnPrefix = configs.sqsArnPrefix || sqsArnPrefix
-  queueUrlPrefix = configs.queueUrlPrefix || queueUrlPrefix
-  resourceNamePrefix = configs.resourceNamePrefix || resourceNamePrefix
-}
+export default Config

@@ -3,31 +3,34 @@ import * as Promise from 'bluebird'
 import { EventEmitter } from 'events'
 import { SQS } from 'aws-sdk'
 
-import * as config from './config'
 import Consumer from './consumer'
+import Config from './config'
 
 class Queue extends EventEmitter {
   sqs: SQS
   name: string
-  opts: any
+  opts: {
+    withDeadLetter: boolean
+    visibilityTimeout: string
+    maximumMessageSize: string
+    isDeadLetterQueue: boolean
+    maxReceiveCount: number
+  }
   realName: string
   arn: string
   isReady: boolean
   consumers: Consumer[]
   queueUrl: string
   deadLetterQueue: Queue
+  config: Config
 
-  /**
-   * Construct an SQS queue.
-   * @param {String} name
-   * @param {Boolean} [opts.withDeadLetter=false]
-   * @param {String} [opts.deadLetterQueueName]
-   * @param {Number} [opts.visibilityTimeout=30]
-   * @param {Number} [opts.maximumMessageSize=262144] - 256KB
-   * @param {Number} [opts.isDeadLetterQueue=false]
-   * @param {Number} [opts.maxReceiveCount=5]
-   */
-  constructor(sqs: SQS, name: string, opts: any = {}) {
+  constructor(sqs: SQS, name: string, opts: {
+    withDeadLetter?: boolean
+    visibilityTimeout?: number
+    maximumMessageSize?: number
+    isDeadLetterQueue?: boolean
+    maxReceiveCount?: number
+  } = {}, config: Config) {
     super()
     this.sqs = sqs
     this.opts = {
@@ -38,10 +41,11 @@ class Queue extends EventEmitter {
       maxReceiveCount: opts.maxReceiveCount || 5,
     }
     this.name = name
-    this.realName = config.getResourceNamePrefix() + name
-    this.arn = config.getSqsArnPrefix() + this.realName
+    this.realName = config.resourceNamePrefix + name
+    this.arn = config.sqsArnPrefix + this.realName
     this.isReady = false
     this.consumers = []
+    this.config = config
 
     this._createQueue().then(data => {
       debug('Queue created', data)
@@ -54,37 +58,40 @@ class Queue extends EventEmitter {
   _createQueue() {
     debug(`Creating queue ${this.realName}`)
     const opts = this.opts
-    const createParams: any = opts.isDeadLetterQueue ? { QueueName: this.realName } : {
-      QueueName: this.realName,
-      Attributes: {
-        MaximumMessageSize: opts.maximumMessageSize,
-        VisibilityTimeout: opts.visibilityTimeout,
-        Policy: `{
+    const createParams: SQS.Types.CreateQueueRequest = opts.isDeadLetterQueue
+      ? {
+        QueueName: this.realName,
+      } : {
+        QueueName: this.realName,
+        Attributes: {
+          MaximumMessageSize: opts.maximumMessageSize,
+          VisibilityTimeout: opts.visibilityTimeout,
+          Policy: `{
             "Version": "2012-10-17",
-            "Id": "${config.getSqsArnPrefix()}${this.realName}/SQSDefaultPolicy",
+            "Id": "${this.config.sqsArnPrefix}${this.realName}/SQSDefaultPolicy",
             "Statement": [
               {
                 "Sid": "1",
                 "Effect": "Allow",
                 "Principal": "*",
                 "Action": "SQS:SendMessage",
-                "Resource": "${config.getSqsArnPrefix()}${this.realName}"
+                "Resource": "${this.config.sqsArnPrefix}${this.realName}"
               }
             ]
           }`.replace(/\s/g, ''),
-      },
-    }
+        },
+      }
 
     return new Promise((resolve, reject) => {
       if (opts.withDeadLetter) {
-        opts.deadLetterQueueName = opts.deadLetterQueueName || `${this.name}-dl`
+        const deadLetterQueueName = `${this.name}-dl`
 
-        debug('Creating dead letter Queue', opts.deadLetterQueueName)
-        const deadLetterQueue = new Queue(this.sqs, opts.deadLetterQueueName, { isDeadLetterQueue: true })
+        debug('Creating dead letter Queue', deadLetterQueueName)
+        const deadLetterQueue = new Queue(this.sqs, deadLetterQueueName, { isDeadLetterQueue: true }, this.config)
         this.deadLetterQueue = deadLetterQueue
 
         // set redrive policy on origin queue
-        createParams.Attributes.RedrivePolicy = `{"maxReceiveCount":"${opts.maxReceiveCount}", "deadLetterTargetArn":"${config.getSqsArnPrefix()}${deadLetterQueue.realName}"}`
+        createParams.Attributes!.RedrivePolicy = `{"maxReceiveCount":"${opts.maxReceiveCount}", "deadLetterTargetArn":"${this.config.sqsArnPrefix}${deadLetterQueue.realName}"}`
 
         deadLetterQueue.on('ready', () => {
           resolve()
@@ -92,14 +99,14 @@ class Queue extends EventEmitter {
       } else {
         resolve()
       }
-    }).then(() =>
-      new Promise((resolve, reject) => {
+    }).then(() => {
+      return new Promise((resolve, reject) => {
         this.sqs.createQueue(createParams, (err, data) => {
           if (err) {
             if (err.name === 'QueueAlreadyExists') {
               console.warn('QueueAlreadyExists', err.stack)
               // ignore QueueAlreadyExists error
-              resolve({ QueueUrl: config.getQueueUrlPrefix() + createParams.QueueName })
+              resolve({ QueueUrl: this.config.queueUrlPrefix + createParams.QueueName })
               return
             }
             reject(err)
@@ -108,7 +115,7 @@ class Queue extends EventEmitter {
           }
         })
       })
-      )
+    })
   }
 
   /**

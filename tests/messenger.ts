@@ -6,6 +6,9 @@ import Messenger from '../lib/messenger'
 import Queue from '../lib/queue'
 import Consumer from '../lib/consumer'
 import Topic from '../lib/topic'
+import Config from '../lib/config'
+
+const config = new Config()
 
 test.beforeEach(t => {
   t.context.sandbox.stub(Messenger.sqs, 'createQueue').callsArgWithAsync(1, null, {
@@ -85,7 +88,7 @@ test.cb.serial('bind topic', t => {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
-  const topic = new Topic(Messenger.sns, 'topic')
+  const topic = new Topic(Messenger.sns, 'topic', config)
   const quene = messenger.createQueue('myQueue', {
     bindTopic: topic,
   })
@@ -103,9 +106,9 @@ test.cb.serial('bind topics', t => {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_'
   })
-  const topic1 = new Topic(Messenger.sns, 'topic1')
-  const topic2 = new Topic(Messenger.sns, 'topic2')
-  const topic3 = new Topic(Messenger.sns, 'topic3')
+  const topic1 = new Topic(Messenger.sns, 'topic1', config)
+  const topic2 = new Topic(Messenger.sns, 'topic2', config)
+  const topic3 = new Topic(Messenger.sns, 'topic3', config)
   const quene = messenger.createQueue('myQueue', {
     bindTopics: [topic1, topic2, topic3],
   })

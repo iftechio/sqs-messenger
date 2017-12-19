@@ -24,8 +24,8 @@ class Producer {
       } else {
         topic.on('ready', () => resolve())
       }
-    }).timeout(2000).then(() =>
-      new Promise((resolve, reject) => {
+    }).timeout(2000).then(() => {
+      return new Promise((resolve, reject) => {
         this.sns.publish({
           TopicArn: topic.arn,
           Message: encodedMessage,
@@ -34,7 +34,7 @@ class Producer {
           else resolve(result)
         })
       })
-      )
+    })
   }
 
   /**

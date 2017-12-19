@@ -4,7 +4,9 @@ import * as Promise from 'bluebird'
 import { SQS } from 'aws-sdk'
 
 import Queue from '../lib/queue'
-import * as config from '../lib/config'
+import Config from '../lib/config'
+
+const config = new Config()
 
 const sqs = new SQS({
   region: 'cn-north-1',
@@ -17,7 +19,7 @@ test.before(t => {
 })
 
 test.cb.serial('should receive message', t => {
-  const c1 = new Queue(sqs, 'c1')
+  const c1 = new Queue(sqs, 'c1', {}, config)
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
@@ -30,7 +32,7 @@ test.cb.serial('should receive message', t => {
 })
 
 test.cb.serial('should delete message on done', t => {
-  const c2 = new Queue(sqs, 'c2')
+  const c2 = new Queue(sqs, 'c2', {}, config)
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, { Messages: [{ ReceiptHandle: '1', Body: '{"text":"hahaha"}' }] })
@@ -54,7 +56,7 @@ test.cb.serial('should delete message on done', t => {
 })
 
 test.serial('should handle consumer handler timeout', t => {
-  const c3 = new Queue(sqs, 'c3')
+  const c3 = new Queue(sqs, 'c3', {}, config)
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
@@ -76,7 +78,7 @@ test.serial('should handle consumer handler timeout', t => {
 })
 
 test.cb.serial('should delete batch messages on done', t => {
-  const c4 = new Queue(sqs, 'c4')
+  const c4 = new Queue(sqs, 'c4', {}, config)
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, {
