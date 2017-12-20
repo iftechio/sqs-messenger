@@ -2,10 +2,12 @@
   "name": "@ruguoapp/sqs-messenger",
   "version": "1.0.0-alpha.1",
   "description": "",
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "rm -rf dist && tsc && AWS_ACCESS_KEY_ID=ABCDEF AWS_SECRET_ACCESS_KEY=ABCDEF ava -T 10000 dist/tests"
+    "test": "rm -rf dist && tsc && AWS_ACCESS_KEY_ID=ABCDEF AWS_SECRET_ACCESS_KEY=ABCDEF ava -T 10000 dist/tests",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@types/bluebird": "3.5.18",
