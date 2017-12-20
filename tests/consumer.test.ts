@@ -1,26 +1,25 @@
-const test = require('ava')
-const sinon = require('sinon')
-const Promise = require('bluebird')
+import test from './_init'
+import * as sinon from 'sinon'
+import * as Bluebird from 'bluebird'
+import { SQS } from 'aws-sdk'
 
-const sqs = require('../../lib/clients').sqs
-const Queue = require('../../lib/queue')
-const config = require('../../lib/config')
+import Queue from '../lib/queue'
+import Config from '../lib/config'
+
+const config = new Config()
+
+const sqs = new SQS({
+  region: 'cn-north-1',
+  apiVersion: '2012-11-05',
+})
 
 test.before(t => {
   sinon.stub(sqs, 'createQueue')
     .callsArgWithAsync(1, null, { QueueUrl: 'http://test:c' })
 })
-test.beforeEach(t => {
-  t.context.sandbox = sinon.sandbox.create()
-})
 
-test.afterEach(t => {
-  t.context.sandbox.restore()
-})
-
-test.serial.cb('should receive message', t => {
-
-  const c1 = new Queue('c1')
+test.cb.serial('should receive message', t => {
+  const c1 = new Queue(sqs, 'c1', {}, config)
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
@@ -32,8 +31,8 @@ test.serial.cb('should receive message', t => {
   })
 })
 
-test.serial.cb('should delete message on done', t => {
-  const c2 = new Queue('c2')
+test.cb.serial('should delete message on done', t => {
+  const c2 = new Queue(sqs, 'c2', {}, config)
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, { Messages: [{ ReceiptHandle: '1', Body: '{"text":"hahaha"}' }] })
@@ -57,17 +56,16 @@ test.serial.cb('should delete message on done', t => {
 })
 
 test.serial('should handle consumer handler timeout', t => {
-  const c3 = new Queue('c3')
+  const c3 = new Queue(sqs, 'c3', {}, config)
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
-
 
   const consumer = c3.onMessage((message, done) => {
     // do nothing, wait for timeout
   }, { visibilityTimeout: 1 })
 
-  return new Promise((resolve, reject) => {
+  return new Bluebird((resolve, reject) => {
     consumer.on('error', (msg, err) => {
       try {
         t.is(msg, 'Consumer[c3] handler error')
@@ -79,8 +77,8 @@ test.serial('should handle consumer handler timeout', t => {
   }).timeout(2000)
 })
 
-test.serial.cb('should delete batch messages on done', t => {
-  const c4 = new Queue('c4')
+test.cb.serial('should delete batch messages on done', t => {
+  const c4 = new Queue(sqs, 'c4', {}, config)
   t.context.sandbox.stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, {
