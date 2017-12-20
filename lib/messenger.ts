@@ -7,14 +7,6 @@ import Queue from './queue'
 import Topic from './topic'
 import Consumer from './consumer'
 
-const TYPES: {
-  TOPIC: 'topic'
-  QUEUE: 'queue'
-} = {
-    TOPIC: 'topic',
-    QUEUE: 'queue',
-  }
-
 /**
  * Default error handler, print error to console.
  */
@@ -78,19 +70,19 @@ class Messenger {
       return Promise.reject(new Error('Invalid parameter list'))
     }
     if (arguments.length === 2) {
-      return this.send<T>(TYPES.QUEUE, type, key)
+      return this.send<T>('queue', type, key)
     }
     // send with options
     if (arguments.length === 3 && typeof key === 'object') {
-      return this.send<T>(TYPES.QUEUE, type, key, msg)
+      return this.send<T>('queue', type, key, msg)
     }
-    if (type === TYPES.TOPIC) {
+    if (type === 'topic') {
       const topic = this.topicMap[key]
       if (!topic) {
         throw new Error(`Topic[${key}] not found`)
       }
       return this.producer.sendTopic<T>(topic, msg)
-    } else if (type === TYPES.QUEUE) {
+    } else if (type === 'queue') {
       const queue = this.queueMap[key]
       if (!queue) {
         throw new Error(`Queue[${key}] not found`)

@@ -57,7 +57,7 @@ test.cb.serial('register one consumer', t => {
   t.true(consumer instanceof Consumer)
 })
 
-test.cb.serial.skip('register two consumers', t => {
+test.cb.serial('register two consumers', t => {
   const receiveMessage = t.context.sandbox.stub(sqs, 'receiveMessage')
   receiveMessage.onFirstCall().callsArgWithAsync(1, null, {
     Messages: [{ Body: '{"n": 1}' }]
@@ -79,13 +79,13 @@ test.cb.serial.skip('register two consumers', t => {
     setTimeout(() => {
       done()
       t.deepEqual(numbers, [1, 2])
-      if (message.n == 2) {
+      if (message.n === 2) {
         t.end()
       }
     }, 200)
   }, { batchSize: 1, consumers: 2 }) as Consumer[]
 
-  t.true(consumers.length == 2)
+  t.true(consumers.length === 2)
   consumers.forEach(consumer => {
     t.true(consumer instanceof Consumer)
   })
