@@ -31,8 +31,6 @@ class Messenger {
   config: Config
   producer: Producer
   errorHandler: (...args: any[]) => void
-  sendTopicMessage: Function
-  sendQueueMessage: Function
 
   constructor({ sqs, sns }: { sqs: SQS, sns: SNS }, conf: {
     snsArnPrefix?: string
@@ -46,8 +44,6 @@ class Messenger {
     this.config = new Config(conf)
     this.producer = new Producer({ sqs, sns })
     this.errorHandler = conf.errorHandler || loggingErrorHandler
-    this.sendTopicMessage = this.send.bind(this, TYPES.TOPIC)
-    this.sendQueueMessage = this.send.bind(this, TYPES.QUEUE)
   }
 
   /**
@@ -77,7 +73,7 @@ class Messenger {
    * Send message to specific topic or queue, messages will be dropped
    * if SQS queue or SNS topic in the process of declaring.
    */
-  async send<T = any>(type: 'topic' | 'queue', key: string, msg: T | any, options?: SQS.SendMessageRequest): Promise<SNS.Types.PublishResponse | SQS.Types.SendMessageResult> {
+  async send<T = any>(type: 'topic' | 'queue', key: string, msg: T | any, opts?: SQS.SendMessageRequest): Promise<SNS.Types.PublishResponse | SQS.Types.SendMessageResult> {
     if (arguments.length < 2) {
       return Promise.reject(new Error('Invalid parameter list'))
     }
@@ -99,9 +95,17 @@ class Messenger {
       if (!queue) {
         throw new Error(`Queue[${key}] not found`)
       }
-      return this.producer.sendQueue<T>(queue, msg, options)
+      return this.producer.sendQueue<T>(queue, msg, opts)
     }
     return Promise.reject(new Error(`Resource type not supported for ${type}`))
+  }
+
+  async sendTopicMessage<T = any>(key: string, msg: T | any): Promise<SNS.Types.PublishResponse> {
+    return this.send<T>('topic', key, msg)
+  }
+
+  async sendQueueMessage<T = any>(key: string, msg: T | any, opts?: SQS.SendMessageRequest): Promise<SQS.Types.SendMessageResult> {
+    return this.send<T>('queue', key, msg, opts)
   }
 
   /**

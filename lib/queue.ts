@@ -120,7 +120,11 @@ class Queue extends EventEmitter {
   /**
    * Register a consumer handler on a queue.
    */
-  onMessage<T = any>(consumerHandler: (message: T | T[], callback: (err?: Error) => void) => void, opts?): Consumer {
+  onMessage<T = any>(consumerHandler: (message: T | T[], callback: (err?: Error) => void) => void, opts?: {
+    batchSize?: number
+    visibilityTimeout?: number
+    batchHandle?: boolean
+  }): Consumer {
     const consumer = new Consumer(this, consumerHandler, opts)
     this.consumers.push(consumer)
     return consumer
@@ -129,7 +133,7 @@ class Queue extends EventEmitter {
   /**
    * Gracefully shutdown each consumer within `timeout`
    */
-  async shutdown(timeout): Promise<void[]> {
+  async shutdown(timeout: number): Promise<void[]> {
     return Bluebird.map(this.consumers, (consumer) => {
       return consumer.shutdown(timeout)
     })
