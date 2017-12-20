@@ -1,6 +1,6 @@
 {
   "name": "@ruguoapp/sqs-messenger",
-  "version": "1.0.0",
+  "version": "1.0.0-alpha.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -8,6 +8,8 @@
     "test": "rm -rf dist && tsc && AWS_ACCESS_KEY_ID=ABCDEF AWS_SECRET_ACCESS_KEY=ABCDEF ava -T 10000 dist/tests"
   },
   "dependencies": {
+    "@types/bluebird": "3.5.18",
+    "@types/node": "8.5.1",
     "bluebird": "3.5.1",
     "debug": "3.1.0"
   },
@@ -15,7 +17,7 @@
     "aws-sdk": "^2.171.0"
   },
   "devDependencies": {
-    "@types/node": "8.5.1",
+    "@types/sinon": "4.1.2",
     "ava": "0.24.0",
     "aws-sdk": "2.171.0",
     "sinon": "4.1.3",

@@ -1,5 +1,5 @@
 const debug = require('debug')('sqs-messenger:queue')
-import * as bluebird from 'bluebird'
+import * as Bluebird from 'bluebird'
 import { EventEmitter } from 'events'
 import { SQS } from 'aws-sdk'
 
@@ -119,12 +119,8 @@ class Queue extends EventEmitter {
 
   /**
    * Register a consumer handler on a queue.
-   *
-   * @param {Function} consumerHandler
-   * @param {Object} opts - @see {Consumer}
-   * @returns {Consumer}
    */
-  onMessage<T = any>(consumerHandler: (message: T | T[], callback: (err?: Error) => void) => void, opts?) {
+  onMessage<T = any>(consumerHandler: (message: T | T[], callback: (err?: Error) => void) => void, opts?): Consumer {
     const consumer = new Consumer(this, consumerHandler, opts)
     this.consumers.push(consumer)
     return consumer
@@ -133,8 +129,8 @@ class Queue extends EventEmitter {
   /**
    * Gracefully shutdown each consumer within `timeout`
    */
-  async shutdown(timeout): Promise<void> {
-    return bluebird.map(this.consumers, (consumer) => {
+  async shutdown(timeout): Promise<void[]> {
+    return Bluebird.map(this.consumers, (consumer) => {
       return consumer.shutdown(timeout)
     })
   }

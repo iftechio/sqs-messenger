@@ -1,5 +1,4 @@
 import test from './_init'
-import * as sinon from 'sinon'
 import { SQS, SNS } from 'aws-sdk'
 
 import Producer from '../lib/producer'

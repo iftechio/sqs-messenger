@@ -1,4 +1,4 @@
-import * as bluebird from 'bluebird'
+import * as Bluebird from 'bluebird'
 import { SQS, SNS } from 'aws-sdk'
 
 import Config from './config'
@@ -17,7 +17,6 @@ const TYPES: {
 
 /**
  * Default error handler, print error to console.
- * @param args
  */
 function loggingErrorHandler(...args) {
   console.error.apply(undefined, ['[sqs-messenger]'].concat(
@@ -146,13 +145,10 @@ class Messenger {
 
   /**
    * Gracefully shutdown each queue within `timeout`
-   *
-   * @param {Number} timeout
-   * @returns {Promise}
    */
-  async shutdown(timeout: number): Promise<void> {
+  async shutdown(timeout: number): Promise<void[][]> {
     const queues = Object.keys(this.queueMap).map(queueName => this.queueMap[queueName])
-    return bluebird.map(queues, (queue) => {
+    return Bluebird.map(queues, (queue) => {
       return queue.shutdown(timeout)
     })
   }

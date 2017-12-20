@@ -1,4 +1,4 @@
-import * as bluebird from 'bluebird'
+import * as Bluebird from 'bluebird'
 import { SQS, SNS } from 'aws-sdk'
 
 import Queue from './queue'
@@ -18,7 +18,7 @@ class Producer {
    */
   async sendTopic<T = any>(topic: Topic, message: T): Promise<SNS.Types.PublishResponse> {
     const encodedMessage = JSON.stringify(message)
-    return new bluebird((resolve) => {
+    return new Bluebird((resolve) => {
       if (topic.isReady) {
         resolve()
       } else {
@@ -41,7 +41,7 @@ class Producer {
    */
   async sendQueue<T = any>(queue: Queue, message: T, options?: SQS.SendMessageRequest): Promise<SQS.Types.SendMessageResult> {
     const encodedMessage = JSON.stringify(message)
-    return new bluebird((resolve) => {
+    return new Bluebird((resolve) => {
       if (queue.isReady) {
         resolve()
       } else {

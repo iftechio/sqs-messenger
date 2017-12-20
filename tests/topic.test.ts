@@ -1,6 +1,5 @@
 import test from './_init'
-import * as Promise from 'bluebird'
-import * as sinon from 'sinon'
+import * as Bluebird from 'bluebird'
 import { SQS, SNS } from 'aws-sdk'
 
 import Topic from '../lib/topic'
@@ -46,7 +45,7 @@ test.serial('should bind queue', t => {
   const t2 = new Topic(sns, 't2', config)
   t2.subscribe(tq)
 
-  return Promise.delay(200)
+  return Bluebird.delay(200)
     .then(() => {
       t.truthy(subStub.calledOnce)
       t.truthy(setAttrStub.calledOnce)

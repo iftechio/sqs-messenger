@@ -1,6 +1,4 @@
 import test from './_init'
-import * as sinon from 'sinon'
-import * as Promise from 'bluebird'
 import { SQS, SNS } from 'aws-sdk'
 
 import Messenger from '../lib/messenger'

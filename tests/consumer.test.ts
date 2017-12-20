@@ -1,6 +1,6 @@
 import test from './_init'
 import * as sinon from 'sinon'
-import * as Promise from 'bluebird'
+import * as Bluebird from 'bluebird'
 import { SQS } from 'aws-sdk'
 
 import Queue from '../lib/queue'
@@ -65,7 +65,7 @@ test.serial('should handle consumer handler timeout', t => {
     // do nothing, wait for timeout
   }, { visibilityTimeout: 1 })
 
-  return new Promise((resolve, reject) => {
+  return new Bluebird((resolve, reject) => {
     consumer.on('error', (msg, err) => {
       try {
         t.is(msg, 'Consumer[c3] handler error')
