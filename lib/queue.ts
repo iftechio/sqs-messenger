@@ -125,7 +125,7 @@ class Queue extends EventEmitter {
     visibilityTimeout?: number
     batchHandle?: boolean
   }): Consumer {
-    const consumer = new Consumer(this, consumerHandler, opts)
+    const consumer = new Consumer<T>(this, consumerHandler, opts)
     this.consumers.push(consumer)
     return consumer
   }

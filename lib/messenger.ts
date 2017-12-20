@@ -143,7 +143,7 @@ class Messenger {
    * Gracefully shutdown each queue within `timeout`
    */
   async shutdown(timeout: number): Promise<void[][]> {
-    const queues = Object.keys(this.queueMap).map(queueName => this.queueMap[queueName])
+    const queues = Object.values(this.queueMap)
     return Bluebird.map(queues, (queue) => {
       return queue.shutdown(timeout)
     })
