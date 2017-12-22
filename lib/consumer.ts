@@ -37,7 +37,7 @@ class Consumer<T = any> extends EventEmitter {
   /**
    * Fetch a batch of messages from queue, and dispatch to internal response handler.
    */
-  _poll(): void {
+  _pull(): void {
     if (this.running) {
       debug('Polling for messages')
       this.queue.sqs.receiveMessage({
@@ -62,9 +62,9 @@ class Consumer<T = any> extends EventEmitter {
     if (response && response.Messages && response.Messages.length) {
       debug('Handle messages', response.Messages.length)
       this.processingMessagesPromise = this._processMessage(response.Messages)
-      this.processingMessagesPromise.then(() => this._poll())
+      this.processingMessagesPromise.then(() => this._pull())
     } else {
-      this._poll()
+      this._pull()
     }
   }
 
@@ -145,7 +145,7 @@ class Consumer<T = any> extends EventEmitter {
    */
   start(): void {
     this.running = true
-    this._poll()
+    this._pull()
   }
 
   /**

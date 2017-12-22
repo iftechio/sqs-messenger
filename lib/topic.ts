@@ -12,7 +12,7 @@ class Topic extends EventEmitter {
   arn: string
   sns: SNS
 
-  constructor(sns: SNS, name: string, config: Config) {
+  constructor(sns: SNS, name: string, config: Config, dryrun = false) {
     super()
     this.sns = sns
     this.name = name
@@ -20,6 +20,12 @@ class Topic extends EventEmitter {
     this.isReady = false
 
     debug(`Create topic ${this.name}`)
+    if (dryrun) {
+      this.arn = config.snsArnPrefix + this.realName
+      this.isReady = true
+      this.emit('ready')
+      return
+    }
     this.sns.createTopic({ Name: this.realName }, (err, data) => {
       if (err) {
         this.emit('error', err)

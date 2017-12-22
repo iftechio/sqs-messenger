@@ -49,10 +49,11 @@ class Producer {
       }
     }).timeout(2000).then(() => {
       return new Promise((resolve, reject) => {
-        this.sqs.sendMessage(Object.assign({
+        this.sqs.sendMessage({
+          ...opts,
           QueueUrl: queue.queueUrl,
           MessageBody: encodedMessage,
-        }, opts), (err, result) => {
+        }, (err, result) => {
           err ? reject(err) : resolve(result)
         })
       })

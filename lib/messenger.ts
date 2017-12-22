@@ -103,12 +103,16 @@ class Messenger {
   /**
    * Create a topic with specific name, will declare the SNS topic if not exists
    */
-  createTopic(name: string): Topic {
-    const topic = new Topic(this.sns, name, this.config)
+  createTopic(name: string, declareOnly = false): Topic {
+    const topic = new Topic(this.sns, name, this.config, declareOnly)
     topic.on('error', this.errorHandler)
 
     this.topicMap[name] = topic
     return topic
+  }
+
+  declareTopic(name: string): Topic {
+    return this.createTopic(name, true)
   }
 
   /**
@@ -121,11 +125,11 @@ class Messenger {
     visibilityTimeout?: number
     maximumMessageSize?: number
     maxReceiveCount?: number
-  } = {}): Queue {
-    const queue = new Queue(this.sqs, name, opts, this.config)
+  } = {}, declareOnly = false): Queue {
+    const queue = new Queue(this.sqs, name, opts, this.config, declareOnly)
     queue.on('error', this.errorHandler)
 
-    if (opts.bindTopics || opts.bindTopic) {
+    if (!declareOnly && (opts.bindTopics || opts.bindTopic)) {
       const bindTopics = opts.bindTopics || [opts.bindTopic!]
       // Wait for queue being ready, topic will handle itself if is not ready
       if (queue.isReady) {
@@ -138,6 +142,17 @@ class Messenger {
     }
     this.queueMap[name] = queue
     return queue
+  }
+
+  declareQueue(name: string, opts: {
+    bindTopic?: Topic
+    bindTopics?: Topic[]
+    withDeadLetter?: boolean
+    visibilityTimeout?: number
+    maximumMessageSize?: number
+    maxReceiveCount?: number
+  } = {}): Queue {
+    return this.createQueue(name, opts, true)
   }
 
   /**
