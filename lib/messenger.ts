@@ -65,17 +65,7 @@ class Messenger {
    * Send message to specific topic or queue, messages will be dropped
    * if SQS queue or SNS topic in the process of declaring.
    */
-  async send<T = any>(type: 'topic' | 'queue', key: string, msg: T | any, opts?: SQS.SendMessageRequest): Promise<SNS.Types.PublishResponse | SQS.Types.SendMessageResult> {
-    if (arguments.length < 2) {
-      return Promise.reject(new Error('Invalid parameter list'))
-    }
-    if (arguments.length === 2) {
-      return this.send<T>('queue', type, key)
-    }
-    // send with options
-    if (arguments.length === 3 && typeof key === 'object') {
-      return this.send<T>('queue', type, key, msg)
-    }
+  async send<T = any>(type: 'topic' | 'queue', key: string, msg: T, opts?: SQS.SendMessageRequest): Promise<SNS.Types.PublishResponse | SQS.Types.SendMessageResult> {
     if (type === 'topic') {
       const topic = this.topicMap[key]
       if (!topic) {
@@ -92,11 +82,11 @@ class Messenger {
     return Promise.reject(new Error(`Resource type not supported for ${type}`))
   }
 
-  async sendTopicMessage<T = any>(key: string, msg: T | any): Promise<SNS.Types.PublishResponse> {
+  async sendTopicMessage<T = any>(key: string, msg: T): Promise<SNS.Types.PublishResponse> {
     return this.send<T>('topic', key, msg)
   }
 
-  async sendQueueMessage<T = any>(key: string, msg: T | any, opts?: SQS.SendMessageRequest): Promise<SQS.Types.SendMessageResult> {
+  async sendQueueMessage<T = any>(key: string, msg: T, opts?: SQS.SendMessageRequest): Promise<SQS.Types.SendMessageResult> {
     return this.send<T>('queue', key, msg, opts)
   }
 
