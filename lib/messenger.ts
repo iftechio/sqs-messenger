@@ -65,7 +65,7 @@ class Messenger {
    * Send message to specific topic or queue, messages will be dropped
    * if SQS queue or SNS topic in the process of declaring.
    */
-  async send<T = any>(type: 'topic' | 'queue', key: string, msg: T, opts?: SQS.SendMessageRequest): Promise<SNS.Types.PublishResponse | SQS.Types.SendMessageResult> {
+  async send<T = any>(type: 'topic' | 'queue', key: string, msg: T, opts?: { DelaySeconds: number }): Promise<SNS.Types.PublishResponse | SQS.Types.SendMessageResult> {
     if (type === 'topic') {
       const topic = this.topicMap[key]
       if (!topic) {
@@ -86,7 +86,7 @@ class Messenger {
     return this.send<T>('topic', key, msg)
   }
 
-  async sendQueueMessage<T = any>(key: string, msg: T, opts?: SQS.SendMessageRequest): Promise<SQS.Types.SendMessageResult> {
+  async sendQueueMessage<T = any>(key: string, msg: T, opts?: { DelaySeconds: number }): Promise<SQS.Types.SendMessageResult> {
     return this.send<T>('queue', key, msg, opts)
   }
 

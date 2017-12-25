@@ -39,7 +39,7 @@ class Producer {
   /**
    * Send message to queue
    */
-  async sendQueue<T = any>(queue: Queue, message: T, opts?: SQS.SendMessageRequest): Promise<SQS.Types.SendMessageResult> {
+  async sendQueue<T = any>(queue: Queue, message: T, opts?: { DelaySeconds: number }): Promise<SQS.Types.SendMessageResult> {
     const encodedMessage = JSON.stringify(message)
     return new Bluebird((resolve) => {
       if (queue.isReady) {
