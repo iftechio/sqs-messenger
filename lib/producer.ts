@@ -39,7 +39,7 @@ class Producer {
   /**
    * Send message to queue
    */
-  async sendQueue<T = any>(queue: Queue, message: T, opts?: SQS.SendMessageRequest): Promise<SQS.Types.SendMessageResult> {
+  async sendQueue<T = any>(queue: Queue, message: T, opts?: { DelaySeconds: number }): Promise<SQS.Types.SendMessageResult> {
     const encodedMessage = JSON.stringify(message)
     return new Bluebird((resolve) => {
       if (queue.isReady) {
@@ -49,10 +49,11 @@ class Producer {
       }
     }).timeout(2000).then(() => {
       return new Promise((resolve, reject) => {
-        this.sqs.sendMessage(Object.assign({
+        this.sqs.sendMessage({
+          ...opts,
           QueueUrl: queue.queueUrl,
           MessageBody: encodedMessage,
-        }, opts), (err, result) => {
+        }, (err, result) => {
           err ? reject(err) : resolve(result)
         })
       })

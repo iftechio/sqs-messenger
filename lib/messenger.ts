@@ -45,13 +45,13 @@ class Messenger {
     batchSize?: number
     consumers?: number
     batchHandle?: boolean
-  } = {}): Consumer | Consumer[] {
+  } = {}): Consumer<T> | Consumer<T>[] {
     const queue = this.queueMap[queueName]
     if (!queue) {
       throw new Error('Queue not found')
     }
 
-    let consumers: Consumer[] = []
+    let consumers: Consumer<T>[] = []
     const consumersNum = opts.consumers || 1
     for (let i = 0; i < consumersNum; i++) {
       const consumer = queue.onMessage<T>(handler, opts)
@@ -61,43 +61,20 @@ class Messenger {
     return consumers.length > 1 ? consumers : consumers[0]
   }
 
-  /**
-   * Send message to specific topic or queue, messages will be dropped
-   * if SQS queue or SNS topic in the process of declaring.
-   */
-  async send<T = any>(type: 'topic' | 'queue', key: string, msg: T | any, opts?: SQS.SendMessageRequest): Promise<SNS.Types.PublishResponse | SQS.Types.SendMessageResult> {
-    if (arguments.length < 2) {
-      return Promise.reject(new Error('Invalid parameter list'))
+  async sendTopicMessage<T = any>(key: string, msg: T): Promise<SNS.Types.PublishResponse> {
+    const topic = this.topicMap[key]
+    if (!topic) {
+      throw new Error(`Topic[${key}] not found`)
     }
-    if (arguments.length === 2) {
-      return this.send<T>('queue', type, key)
-    }
-    // send with options
-    if (arguments.length === 3 && typeof key === 'object') {
-      return this.send<T>('queue', type, key, msg)
-    }
-    if (type === 'topic') {
-      const topic = this.topicMap[key]
-      if (!topic) {
-        throw new Error(`Topic[${key}] not found`)
-      }
-      return this.producer.sendTopic<T>(topic, msg)
-    } else if (type === 'queue') {
-      const queue = this.queueMap[key]
-      if (!queue) {
-        throw new Error(`Queue[${key}] not found`)
-      }
-      return this.producer.sendQueue<T>(queue, msg, opts)
-    }
-    return Promise.reject(new Error(`Resource type not supported for ${type}`))
+    return this.producer.sendTopic<T>(topic, msg)
   }
 
-  async sendTopicMessage<T = any>(key: string, msg: T | any): Promise<SNS.Types.PublishResponse> {
-    return this.send<T>('topic', key, msg)
-  }
-
-  async sendQueueMessage<T = any>(key: string, msg: T | any, opts?: SQS.SendMessageRequest): Promise<SQS.Types.SendMessageResult> {
-    return this.send<T>('queue', key, msg, opts)
+  async sendQueueMessage<T = any>(key: string, msg: T, opts?: { DelaySeconds: number }): Promise<SQS.Types.SendMessageResult> {
+    const queue = this.queueMap[key]
+    if (!queue) {
+      throw new Error(`Queue[${key}] not found`)
+    }
+    return this.producer.sendQueue<T>(queue, msg, opts)
   }
 
   /**

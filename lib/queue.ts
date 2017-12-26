@@ -30,7 +30,7 @@ class Queue extends EventEmitter {
     maximumMessageSize?: number
     isDeadLetterQueue?: boolean
     maxReceiveCount?: number
-  } = {}, config: Config) {
+  }, config: Config) {
     super()
     this.sqs = sqs
     this.opts = {
@@ -55,7 +55,7 @@ class Queue extends EventEmitter {
     }, error => this.emit('error', error))
   }
 
-  async _createQueue(): Promise<SQS.Types.CreateQueueResult> {
+  async _createQueue(): Promise<{ QueueUrl?: string }> {
     debug(`Creating queue ${this.realName}`)
     const opts = this.opts
     const createParams: SQS.Types.CreateQueueRequest = opts.isDeadLetterQueue
@@ -120,12 +120,12 @@ class Queue extends EventEmitter {
   /**
    * Register a consumer handler on a queue.
    */
-  onMessage<T = any>(consumerHandler: (message: T | T[], callback: (err?: Error) => void) => void, opts?: {
+  onMessage<T = any>(handler: (message: T | T[], callback: (err?: Error) => void) => void, opts?: {
     batchSize?: number
     visibilityTimeout?: number
     batchHandle?: boolean
-  }): Consumer {
-    const consumer = new Consumer<T>(this, consumerHandler, opts)
+  }): Consumer<T> {
+    const consumer = new Consumer<T>(this, handler, opts)
     this.consumers.push(consumer)
     return consumer
   }
