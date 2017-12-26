@@ -30,7 +30,7 @@ class Queue extends EventEmitter {
     maximumMessageSize?: number
     isDeadLetterQueue?: boolean
     maxReceiveCount?: number
-  }, config: Config, dryrun = false) {
+  }, config: Config) {
     super()
     this.sqs = sqs
     this.opts = {
@@ -47,12 +47,6 @@ class Queue extends EventEmitter {
     this.consumers = []
     this.config = config
 
-    if (dryrun) {
-      this.queueUrl = this.config.queueUrlPrefix + this.realName
-      this.isReady = true
-      this.emit('ready')
-      return
-    }
     this._createQueue().then(data => {
       debug('Queue created', data)
       this.queueUrl = data.QueueUrl!
