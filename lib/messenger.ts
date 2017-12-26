@@ -61,33 +61,20 @@ class Messenger {
     return consumers.length > 1 ? consumers : consumers[0]
   }
 
-  /**
-   * Send message to specific topic or queue, messages will be dropped
-   * if SQS queue or SNS topic in the process of declaring.
-   */
-  async send<T = any>(type: 'topic' | 'queue', key: string, msg: T, opts?: { DelaySeconds: number }): Promise<SNS.Types.PublishResponse | SQS.Types.SendMessageResult> {
-    if (type === 'topic') {
-      const topic = this.topicMap[key]
-      if (!topic) {
-        throw new Error(`Topic[${key}] not found`)
-      }
-      return this.producer.sendTopic<T>(topic, msg)
-    } else if (type === 'queue') {
-      const queue = this.queueMap[key]
-      if (!queue) {
-        throw new Error(`Queue[${key}] not found`)
-      }
-      return this.producer.sendQueue<T>(queue, msg, opts)
-    }
-    return Promise.reject(new Error(`Resource type not supported for ${type}`))
-  }
-
   async sendTopicMessage<T = any>(key: string, msg: T): Promise<SNS.Types.PublishResponse> {
-    return this.send<T>('topic', key, msg)
+    const topic = this.topicMap[key]
+    if (!topic) {
+      throw new Error(`Topic[${key}] not found`)
+    }
+    return this.producer.sendTopic<T>(topic, msg)
   }
 
   async sendQueueMessage<T = any>(key: string, msg: T, opts?: { DelaySeconds: number }): Promise<SQS.Types.SendMessageResult> {
-    return this.send<T>('queue', key, msg, opts)
+    const queue = this.queueMap[key]
+    if (!queue) {
+      throw new Error(`Queue[${key}] not found`)
+    }
+    return this.producer.sendQueue<T>(queue, msg, opts)
   }
 
   /**
