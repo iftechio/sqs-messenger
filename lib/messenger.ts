@@ -45,13 +45,13 @@ class Messenger {
     batchSize?: number
     consumers?: number
     batchHandle?: boolean
-  } = {}): Consumer | Consumer[] {
+  } = {}): Consumer<T> | Consumer<T>[] {
     const queue = this.queueMap[queueName]
     if (!queue) {
       throw new Error('Queue not found')
     }
 
-    let consumers: Consumer[] = []
+    let consumers: Consumer<T>[] = []
     const consumersNum = opts.consumers || 1
     for (let i = 0; i < consumersNum; i++) {
       const consumer = queue.onMessage<T>(handler, opts)
