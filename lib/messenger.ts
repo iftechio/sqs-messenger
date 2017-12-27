@@ -41,7 +41,7 @@ class Messenger {
   /**
    * Register a message handler on a queue
    */
-  on<T = any>(queueName: string, handler: (message: T | T[], callback: (err?: Error) => void) => void, opts: {
+  _on<T = any>(queueName: string, handler: (message: T | T[], callback: (err?: Error) => void) => void, opts: {
     batchSize?: number
     consumers?: number
     batchHandle?: boolean
@@ -59,6 +59,20 @@ class Messenger {
       consumers.push(consumer)
     }
     return consumers.length > 1 ? consumers : consumers[0]
+  }
+
+  on<T = any>(queueName: string, handler: (message: T, callback: (err?: Error) => void) => void, opts: {
+    consumers?: number
+  } = {}): Consumer<T> | Consumer<T>[] {
+    return this._on(queueName, handler, opts)
+  }
+
+  onBatch<T = any>(queueName: string, handler: (message: T[], callback: (err?: Error) => void) => void, opts: {
+    batchSize?: number
+    consumers?: number
+    batchHandle?: boolean
+  } = {}): Consumer<T> | Consumer<T>[] {
+    return this._on(queueName, handler, opts)
   }
 
   async sendTopicMessage<T = any>(key: string, msg: T): Promise<SNS.Types.PublishResponse> {
