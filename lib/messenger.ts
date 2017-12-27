@@ -43,7 +43,7 @@ class Messenger {
    */
   _on<T = any>(queueName: string, handler: (message: T | T[], callback: (err?: Error) => void) => void, opts: {
     batchHandle: boolean
-    consumers: number
+    consumers?: number
     batchSize?: number
     visibilityTimeout?: number
   }): Consumer<T> | Consumer<T>[] {
@@ -53,7 +53,7 @@ class Messenger {
     }
 
     let consumers: Consumer<T>[] = []
-    for (let i = 0; i < opts.consumers || 1; i++) {
+    for (let i = 0; i < (opts.consumers || 1); i++) {
       const consumer = queue.onMessage<T>(handler, opts)
       consumer.on('error', this.errorHandler)
       consumers.push(consumer)
@@ -62,9 +62,9 @@ class Messenger {
   }
 
   on<T = any>(queueName: string, handler: (message: T, callback: (err?: Error) => void) => void, opts: {
-    consumers: number
+    consumers?: number
     visibilityTimeout?: number
-  } = { consumers: 1 }): Consumer<T> | Consumer<T>[] {
+  } = {}): Consumer<T> | Consumer<T>[] {
     return this._on(queueName, handler, {
       ...opts,
       batchHandle: false,
@@ -72,10 +72,10 @@ class Messenger {
   }
 
   onBatch<T = any>(queueName: string, handler: (messages: T[], callback: (err?: Error) => void) => void, opts: {
-    consumers: number
+    consumers?: number
     batchSize?: number
     visibilityTimeout?: number
-  } = { consumers: 1 }): Consumer<T> | Consumer<T>[] {
+  } = {}): Consumer<T> | Consumer<T>[] {
     return this._on(queueName, handler, {
       ...opts,
       batchHandle: true,
