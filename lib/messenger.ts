@@ -67,7 +67,7 @@ class Messenger {
     return this._on(queueName, handler, opts)
   }
 
-  onBatch<T = any>(queueName: string, handler: (message: T[], callback: (err?: Error) => void) => void, opts: {
+  onBatch<T = any>(queueName: string, handler: (messages: T[], callback: (err?: Error) => void) => void, opts: {
     batchSize?: number
     consumers?: number
     batchHandle?: boolean
