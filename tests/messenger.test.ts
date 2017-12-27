@@ -83,7 +83,7 @@ test.cb.serial('register two consumers', t => {
         t.end()
       }
     }, 200)
-  }, { batchSize: 1, consumers: 2 }) as Consumer[]
+  }, { consumers: 2 }) as Consumer[]
 
   t.true(consumers.length === 2)
   consumers.forEach(consumer => {

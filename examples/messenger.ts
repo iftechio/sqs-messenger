@@ -33,7 +33,7 @@ myQueue.deadLetterQueue.onMessage((messsage, done) => {
   done()
 })
 // register consumer on queue
-sqsMessenger.on('myQueue', (message, done) => {
+sqsMessenger.onBatch('myQueue', (message, done) => {
   // do something
   console.log(message)
   done()
