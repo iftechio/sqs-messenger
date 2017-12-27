@@ -42,18 +42,18 @@ class Messenger {
    * Register a message handler on a queue
    */
   _on<T = any>(queueName: string, handler: (message: T | T[], callback: (err?: Error) => void) => void, opts: {
+    batchHandle: boolean
+    consumers: number
     batchSize?: number
-    consumers?: number
-    batchHandle?: boolean
-  } = {}): Consumer<T> | Consumer<T>[] {
+    visibilityTimeout?: number
+  }): Consumer<T> | Consumer<T>[] {
     const queue = this.queueMap[queueName]
     if (!queue) {
       throw new Error('Queue not found')
     }
 
     let consumers: Consumer<T>[] = []
-    const consumersNum = opts.consumers || 1
-    for (let i = 0; i < consumersNum; i++) {
+    for (let i = 0; i < opts.consumers || 1; i++) {
       const consumer = queue.onMessage<T>(handler, opts)
       consumer.on('error', this.errorHandler)
       consumers.push(consumer)
@@ -62,17 +62,24 @@ class Messenger {
   }
 
   on<T = any>(queueName: string, handler: (message: T, callback: (err?: Error) => void) => void, opts: {
-    consumers?: number
-  } = {}): Consumer<T> | Consumer<T>[] {
-    return this._on(queueName, handler, opts)
+    consumers: number
+    visibilityTimeout?: number
+  } = { consumers: 1 }): Consumer<T> | Consumer<T>[] {
+    return this._on(queueName, handler, {
+      ...opts,
+      batchHandle: false,
+    })
   }
 
   onBatch<T = any>(queueName: string, handler: (messages: T[], callback: (err?: Error) => void) => void, opts: {
+    consumers: number
     batchSize?: number
-    consumers?: number
-    batchHandle?: boolean
-  } = {}): Consumer<T> | Consumer<T>[] {
-    return this._on(queueName, handler, opts)
+    visibilityTimeout?: number
+  } = { consumers: 1 }): Consumer<T> | Consumer<T>[] {
+    return this._on(queueName, handler, {
+      ...opts,
+      batchHandle: true,
+    })
   }
 
   async sendTopicMessage<T = any>(key: string, msg: T): Promise<SNS.Types.PublishResponse> {
