@@ -72,10 +72,10 @@ class Messenger {
   }
 
   onBatch<T = any>(queueName: string, handler: (messages: T[], callback: (err?: Error) => void) => void, opts: {
+    batchSize: number
     consumers?: number
-    batchSize?: number
     visibilityTimeout?: number
-  } = {}): Consumer<T> | Consumer<T>[] {
+  } = { batchSize: 1 }): Consumer<T> | Consumer<T>[] {
     return this._on(queueName, handler, {
       ...opts,
       batchHandle: true,
