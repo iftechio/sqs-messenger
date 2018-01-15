@@ -120,6 +120,7 @@ class Messenger {
     visibilityTimeout?: number
     maximumMessageSize?: number
     maxReceiveCount?: number
+    delaySeconds?: number
   } = {}): Queue {
     const queue = new Queue(this.sqs, name, opts, this.config)
     queue.on('error', this.errorHandler)

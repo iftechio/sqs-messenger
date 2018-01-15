@@ -42,6 +42,7 @@ test.serial('should create queue', t => {
     t.deepEqual(mock.firstCall.args[0], {
       QueueName: 'test_q1',
       Attributes: {
+        DelaySeconds: '0',
         VisibilityTimeout: '30',
         MaximumMessageSize: '262144',
         Policy: expectPolicy,
@@ -81,6 +82,7 @@ test.serial('should create deadletter queue', t => {
     t.deepEqual(mock.secondCall.args[0], {
       QueueName: 'test_q2',
       Attributes: {
+        DelaySeconds: '0',
         VisibilityTimeout: '30',
         MaximumMessageSize: '262144',
         Policy: expectPolicy,
