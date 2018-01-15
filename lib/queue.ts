@@ -108,7 +108,7 @@ class Queue extends EventEmitter {
       this.sqs.createQueue(createParams, (err, data) => {
         if (err) {
           if (err.name === 'QueueAlreadyExists') {
-            console.warn(`QueueAlreadyExists [${this.realName}]`, err.stack)
+            console.warn(`Queue [${this.realName}] already exists`, err.stack)
             // ignore QueueAlreadyExists error
             resolve({ QueueUrl: this.config.queueUrlPrefix + createParams.QueueName })
             return
