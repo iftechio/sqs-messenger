@@ -49,6 +49,7 @@ const myQueue = sqsMessenger.createQueue('myQueue', {
   bindTopics: [myTopic],
   withDeadLetter: true,
   maxReceiveCount: 3,
+  delaySeconds: 30,
 })
 
 // batchSize

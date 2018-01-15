@@ -15,6 +15,7 @@ class Queue extends EventEmitter {
     maximumMessageSize: string
     isDeadLetterQueue: boolean
     maxReceiveCount: number
+    delaySeconds: number
   }
   realName: string
   arn: string
@@ -30,6 +31,7 @@ class Queue extends EventEmitter {
     maximumMessageSize?: number
     isDeadLetterQueue?: boolean
     maxReceiveCount?: number
+    delaySeconds?: number
   }, config: Config) {
     super()
     this.sqs = sqs
@@ -39,6 +41,7 @@ class Queue extends EventEmitter {
       maximumMessageSize: (opts.maximumMessageSize || 262144).toString(),
       isDeadLetterQueue: (typeof opts.isDeadLetterQueue === 'boolean') ? opts.isDeadLetterQueue : false,
       maxReceiveCount: opts.maxReceiveCount || 5,
+      delaySeconds: opts.delaySeconds || 0,
     }
     this.name = name
     this.realName = config.resourceNamePrefix + name
