@@ -78,7 +78,15 @@ class Consumer<T = any> extends EventEmitter {
    */
   async _processMessage(messages: SQS.MessageList): Promise<void> {
     debug('Processing message, %o', messages)
-    const decodedMessages = messages.map(message => message.Body && JSON.parse(message.Body))
+    const decodedMessages = (await Bluebird.map(messages, async message => {
+      try {
+        return message.Body && JSON.parse(message.Body)
+      } catch (err) {
+        // delete message if parse json error
+        console.error(err)
+        await this._deleteMessage(message)
+      }
+    })).filter(message => message)
 
     return (this.batchHandle ?
       new Bluebird<void>((resolve, reject) => {
