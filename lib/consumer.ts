@@ -65,7 +65,7 @@ class Consumer<T = any> extends EventEmitter {
       this.processingMessagesPromise.then(() => {
         this._pull()
       }).catch(err => {
-        console.error(err)
+        this.emit('error', `Consumer[${this.queue.name}] processingMessages error`, err)
         this._pull()
       })
     } else {
