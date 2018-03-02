@@ -12,7 +12,8 @@ node {
     }
 
     stage('Build') {
-      sh 'npm run build'
+      sh 'npm run clean'
+      sh 'npm run compile'
     }
   }
 }
