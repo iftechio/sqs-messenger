@@ -62,7 +62,12 @@ class Consumer<T = any> extends EventEmitter {
     if (response && response.Messages && response.Messages.length) {
       debug('Handle messages', response.Messages.length)
       this.processingMessagesPromise = this._processMessage(response.Messages)
-      this.processingMessagesPromise.then(() => this._pull())
+      this.processingMessagesPromise.then(() => {
+        this._pull()
+      }).catch(err => {
+        this.emit('error', `Consumer[${this.queue.name}] processingMessages error`, err)
+        this._pull()
+      })
     } else {
       this._pull()
     }
