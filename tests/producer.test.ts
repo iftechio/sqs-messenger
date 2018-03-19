@@ -22,14 +22,17 @@ test('should send to topic', t => {
     .once()
     .callsArgWithAsync(1, null, {})
 
+  const message = { text: 'abc' }
+  const metaAttachedMessage = Object.assign({ _meta: { topicName: 'testTopic' } }, message)
   return producer.sendTopic({
     isReady: true,
     arn: 'arn:sns:test',
-  } as Topic, { text: 'abc' }).then(() => {
+    name: 'testTopic'
+  } as Topic, message).then(() => {
     mock.verify()
     t.deepEqual(mock.firstCall.args[0], {
       TopicArn: 'arn:sns:test',
-      Message: '{"text":"abc"}',
+      Message: JSON.stringify(metaAttachedMessage),
     })
   })
 })
@@ -39,15 +42,18 @@ test('should send to queue', t => {
     .once()
     .callsArgWithAsync(1, null, {})
 
+  const message = { text: 'abc' }
+  const metaAttachedMessage = Object.assign({ _meta: { queueName: 'testQueue' } }, message)
   return producer.sendQueue({
     isReady: true,
     arn: 'arn:sqs:test',
     queueUrl: 'http://sqs.test.com/q1',
-  } as Queue, { text: 'abc' }).then(() => {
+    name: 'testQueue'
+  } as Queue, message).then(() => {
     mock.verify()
     t.deepEqual(mock.firstCall.args[0], {
       QueueUrl: 'http://sqs.test.com/q1',
-      MessageBody: '{"text":"abc"}',
+      MessageBody: JSON.stringify(metaAttachedMessage),
     })
   })
 })
