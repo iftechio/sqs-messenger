@@ -43,7 +43,7 @@ test('should send to queue', t => {
     .callsArgWithAsync(1, null, {})
 
   const message = { text: 'abc' }
-  const metaAttachedMessage = Object.assign({ _meta: { queueName: 'testQueue' } }, message)
+  const metaAttachedMessage = Object.assign({ _meta: {} }, message)
   return producer.sendQueue({
     isReady: true,
     arn: 'arn:sqs:test',
