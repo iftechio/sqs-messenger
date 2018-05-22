@@ -37,39 +37,53 @@ class Topic extends EventEmitter {
    */
   async subscribe(queue: Queue): Promise<void> {
     if (!this.isReady) {
-      await new Promise((resolve) => {
+      await new Promise(resolve => {
         this.on('ready', () => resolve())
       })
     }
 
     const data = await new Promise<SNS.Types.SubscribeResponse>((resolve, reject) => {
-      this.sns.subscribe({
-        Protocol: 'sqs',
-        TopicArn: this.arn,
-        Endpoint: queue.arn,
-      }, (err, data) => {
-        if (err) {
-          debug(`Error subscribing ${queue.name}(${queue.realName}) to ${this.name}(${this.realName})`)
-          reject(err)
-        } else {
-          debug(`Succeed subscribing ${queue.name}(${queue.realName}) to ${this.name}(${this.realName})`)
-          resolve(data)
-        }
-      })
+      this.sns.subscribe(
+        {
+          Protocol: 'sqs',
+          TopicArn: this.arn,
+          Endpoint: queue.arn,
+        },
+        (err, data) => {
+          if (err) {
+            debug(
+              `Error subscribing ${queue.name}(${queue.realName}) to ${this.name}(${
+                this.realName
+              })`,
+            )
+            reject(err)
+          } else {
+            debug(
+              `Succeed subscribing ${queue.name}(${queue.realName}) to ${this.name}(${
+                this.realName
+              })`,
+            )
+            resolve(data)
+          }
+        },
+      )
     })
 
     return new Promise<void>((resolve, reject) => {
-      this.sns.setSubscriptionAttributes({
-        SubscriptionArn: data.SubscriptionArn!,
-        AttributeName: 'RawMessageDelivery',
-        AttributeValue: 'true',
-      }, err => {
-        if (err) {
-          reject(err)
-        } else {
-          resolve()
-        }
-      })
+      this.sns.setSubscriptionAttributes(
+        {
+          SubscriptionArn: data.SubscriptionArn!,
+          AttributeName: 'RawMessageDelivery',
+          AttributeValue: 'true',
+        },
+        err => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        },
+      )
     })
   }
 }

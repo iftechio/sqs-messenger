@@ -17,7 +17,9 @@ const config = new Config({
 })
 
 test.serial('should create queue', t => {
-  const mock = t.context.sandbox.mock(sqs).expects('createQueue')
+  const mock = t.context.sandbox
+    .mock(sqs)
+    .expects('createQueue')
     .once()
     .callsArgWithAsync(1, null, {
       QueueUrl: 'http://test_q1',
@@ -52,7 +54,9 @@ test.serial('should create queue', t => {
 })
 
 test.serial('should create deadletter queue', t => {
-  const mock = t.context.sandbox.mock(sqs).expects('createQueue')
+  const mock = t.context.sandbox
+    .mock(sqs)
+    .expects('createQueue')
     .twice()
     .callsArgWithAsync(1, null, {
       QueueUrl: 'http://test_q1',
@@ -95,11 +99,14 @@ test.serial('should create deadletter queue', t => {
 function shutdownMacro(t, input, expected) {
   const sandbox = t.context.sandbox
   sandbox.stub(sqs, 'createQueue').callsArgWithAsync(1, null, {
-    QueueUrl: 'http://test:c'
+    QueueUrl: 'http://test:c',
   })
-  sandbox.stub(sqs, 'receiveMessage').onFirstCall().callsArgWithAsync(1, null, {
-    Messages: [{ Body: '{}' }]
-  })
+  sandbox
+    .stub(sqs, 'receiveMessage')
+    .onFirstCall()
+    .callsArgWithAsync(1, null, {
+      Messages: [{ Body: '{}' }],
+    })
   sandbox.stub(sqs, 'deleteMessage').callsFake((params, callback) => callback())
 
   const queue = new Queue(sqs, 'q', {}, config)

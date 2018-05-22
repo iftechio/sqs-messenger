@@ -11,8 +11,12 @@ import Consumer from './consumer'
  * Default error handler, print error to console.
  */
 function loggingErrorHandler(...args) {
-  console.error.apply(undefined, ['[sqs-messenger]'].concat(
-    Array.prototype.map.call(args, arg => (arg instanceof Error ? arg.stack : arg))))
+  console.error.apply(
+    undefined,
+    ['[sqs-messenger]'].concat(
+      Array.prototype.map.call(args, arg => (arg instanceof Error ? arg.stack : arg)),
+    ),
+  )
 }
 
 class Messenger {
@@ -24,13 +28,16 @@ class Messenger {
   producer: Producer
   errorHandler: (...args: any[]) => void
 
-  constructor({ sqs, sns }: { sqs: SQS, sns: SNS }, conf: {
-    snsArnPrefix?: string
-    sqsArnPrefix?: string
-    queueUrlPrefix?: string
-    resourceNamePrefix?: string
-    errorHandler?: (...args: any[]) => void
-  }) {
+  constructor(
+    { sqs, sns }: { sqs: SQS; sns: SNS },
+    conf: {
+      snsArnPrefix?: string
+      sqsArnPrefix?: string
+      queueUrlPrefix?: string
+      resourceNamePrefix?: string
+      errorHandler?: (...args: any[]) => void
+    },
+  ) {
     this.sqs = sqs
     this.sns = sns
     this.config = new Config(conf)
@@ -41,12 +48,16 @@ class Messenger {
   /**
    * Register a message handler on a queue
    */
-  _on<T = any>(queueName: string, handler: (message: T | T[], callback: (err?: Error) => void) => void, opts: {
-    batchHandle: boolean
-    consumers?: number
-    batchSize?: number
-    visibilityTimeout?: number
-  }): Consumer<T> | Consumer<T>[] {
+  _on<T = any>(
+    queueName: string,
+    handler: (message: T | T[], callback: (err?: Error) => void) => void,
+    opts: {
+      batchHandle: boolean
+      consumers?: number
+      batchSize?: number
+      visibilityTimeout?: number
+    },
+  ): Consumer<T> | Consumer<T>[] {
     const queue = this.queueMap[queueName]
     if (!queue) {
       throw new Error('Queue not found')
@@ -61,22 +72,30 @@ class Messenger {
     return consumers.length > 1 ? consumers : consumers[0]
   }
 
-  on<T = any>(queueName: string, handler: (message: T, callback: (err?: Error) => void) => void, opts: {
-    batchSize?: number
-    consumers?: number
-    visibilityTimeout?: number
-  } = {}): Consumer<T> | Consumer<T>[] {
+  on<T = any>(
+    queueName: string,
+    handler: (message: T, callback: (err?: Error) => void) => void,
+    opts: {
+      batchSize?: number
+      consumers?: number
+      visibilityTimeout?: number
+    } = {},
+  ): Consumer<T> | Consumer<T>[] {
     return this._on(queueName, handler, {
       ...opts,
       batchHandle: false,
     })
   }
 
-  onBatch<T = any>(queueName: string, handler: (messages: T[], callback: (err?: Error) => void) => void, opts: {
-    batchSize?: number
-    consumers?: number
-    visibilityTimeout?: number
-  } = {}): Consumer<T> | Consumer<T>[] {
+  onBatch<T = any>(
+    queueName: string,
+    handler: (messages: T[], callback: (err?: Error) => void) => void,
+    opts: {
+      batchSize?: number
+      consumers?: number
+      visibilityTimeout?: number
+    } = {},
+  ): Consumer<T> | Consumer<T>[] {
     return this._on(queueName, handler, {
       ...opts,
       batchHandle: true,
@@ -91,7 +110,11 @@ class Messenger {
     return this.producer.sendTopic<T>(topic, msg)
   }
 
-  async sendQueueMessage<T = any>(key: string, msg: T, opts?: { DelaySeconds: number }): Promise<SQS.Types.SendMessageResult> {
+  async sendQueueMessage<T = any>(
+    key: string,
+    msg: T,
+    opts?: { DelaySeconds?: number },
+  ): Promise<SQS.Types.SendMessageResult> {
     const queue = this.queueMap[key]
     if (!queue) {
       throw new Error(`Queue[${key}] not found`)
@@ -113,15 +136,18 @@ class Messenger {
   /**
    * Create a queue with specific name, will declare the SQS queue if not exists
    */
-  createQueue(name: string, opts: {
-    bindTopic?: Topic
-    bindTopics?: Topic[]
-    withDeadLetter?: boolean
-    visibilityTimeout?: number
-    maximumMessageSize?: number
-    maxReceiveCount?: number
-    delaySeconds?: number
-  } = {}): Queue {
+  createQueue(
+    name: string,
+    opts: {
+      bindTopic?: Topic
+      bindTopics?: Topic[]
+      withDeadLetter?: boolean
+      visibilityTimeout?: number
+      maximumMessageSize?: number
+      maxReceiveCount?: number
+      delaySeconds?: number
+    } = {},
+  ): Queue {
     const queue = new Queue(this.sqs, name, opts, this.config)
     queue.on('error', this.errorHandler)
 
@@ -131,9 +157,7 @@ class Messenger {
       if (queue.isReady) {
         bindTopics.forEach(topic => topic.subscribe(queue))
       } else {
-        queue.on('ready', () =>
-          bindTopics.forEach(topic => topic.subscribe(queue))
-        )
+        queue.on('ready', () => bindTopics.forEach(topic => topic.subscribe(queue)))
       }
     }
     this.queueMap[name] = queue
@@ -145,7 +169,7 @@ class Messenger {
    */
   async shutdown(timeout: number): Promise<void[][]> {
     const queues = Object.values(this.queueMap)
-    return Bluebird.map(queues, (queue) => {
+    return Bluebird.map(queues, queue => {
       return queue.shutdown(timeout)
     })
   }
