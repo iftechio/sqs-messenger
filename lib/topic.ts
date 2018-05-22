@@ -1,9 +1,11 @@
-const debug = require('debug')('sqs-messenger:topic')
+import * as Debug from 'debug'
 import { EventEmitter } from 'events'
 import { SNS } from 'aws-sdk'
 
 import Config from './config'
 import Queue from './queue'
+
+const debug = Debug('sqs-messenger:topic')
 
 class Topic extends EventEmitter {
   isReady: boolean
@@ -49,7 +51,7 @@ class Topic extends EventEmitter {
           TopicArn: this.arn,
           Endpoint: queue.arn,
         },
-        (err, data) => {
+        (err, data2) => {
           if (err) {
             debug(
               `Error subscribing ${queue.name}(${queue.realName}) to ${this.name}(${
@@ -63,7 +65,7 @@ class Topic extends EventEmitter {
                 this.realName
               })`,
             )
-            resolve(data)
+            resolve(data2)
           }
         },
       )

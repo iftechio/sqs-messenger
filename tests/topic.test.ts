@@ -55,7 +55,7 @@ test.serial('should bind queue', t => {
 
   const tq = new Queue(sqs, 'tq', {}, config)
   const t2 = new Topic(sns, 't2', config)
-  t2.subscribe(tq)
+  t2.subscribe(tq).catch(console.error)
 
   return Bluebird.delay(200).then(() => {
     t.truthy(subStub.calledOnce)

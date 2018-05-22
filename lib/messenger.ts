@@ -35,7 +35,7 @@ class Messenger {
       sqsArnPrefix?: string
       queueUrlPrefix?: string
       resourceNamePrefix?: string
-      errorHandler?: (...args: any[]) => void
+      errorHandler?(...args: any[]): void
     },
   ) {
     this.sqs = sqs
@@ -63,7 +63,7 @@ class Messenger {
       throw new Error('Queue not found')
     }
 
-    let consumers: Consumer<T>[] = []
+    const consumers: Consumer<T>[] = []
     for (let i = 0; i < (opts.consumers || 1); i++) {
       const consumer = queue.onMessage<T>(handler, opts)
       consumer.on('error', this.errorHandler)
@@ -102,7 +102,10 @@ class Messenger {
     })
   }
 
-  async sendTopicMessage<T = any>(key: string, msg: T): Promise<SNS.Types.PublishResponse> {
+  async sendTopicMessage<T extends object = any>(
+    key: string,
+    msg: T,
+  ): Promise<SNS.Types.PublishResponse> {
     const topic = this.topicMap[key]
     if (!topic) {
       throw new Error(`Topic[${key}] not found`)
@@ -110,7 +113,7 @@ class Messenger {
     return this.producer.sendTopic<T>(topic, msg)
   }
 
-  async sendQueueMessage<T = any>(
+  async sendQueueMessage<T extends object = any>(
     key: string,
     msg: T,
     opts?: { DelaySeconds?: number },

@@ -25,6 +25,7 @@ test.serial('should create queue', t => {
       QueueUrl: 'http://test_q1',
     })
 
+  // tslint:disable-next-line:no-unused-expression
   new Queue(sqs, 'q1', {}, config)
   return Bluebird.delay(200).then(() => {
     mock.verify()
@@ -62,6 +63,7 @@ test.serial('should create deadletter queue', t => {
       QueueUrl: 'http://test_q1',
     })
 
+  // tslint:disable-next-line:no-unused-expression
   new Queue(sqs, 'q2', { withDeadLetter: true }, config)
   return Bluebird.delay(200).then(() => {
     mock.verify()
@@ -107,11 +109,13 @@ function shutdownMacro(t, input, expected) {
     .callsArgWithAsync(1, null, {
       Messages: [{ Body: '{}' }],
     })
+  // tslint:disable-next-line:no-unused
   sandbox.stub(sqs, 'deleteMessage').callsFake((params, callback) => callback())
 
   const queue = new Queue(sqs, 'q', {}, config)
   return Bluebird.delay(200).then(() => {
     const spy = sinon.spy()
+    // tslint:disable-next-line:no-unused
     const consumer = queue.onMessage((message, done) => {
       setTimeout(() => {
         spy()

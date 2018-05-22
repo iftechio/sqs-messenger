@@ -13,7 +13,7 @@ const sqs = new SQS({
   apiVersion: '2012-11-05',
 })
 
-test.before(t => {
+test.before(() => {
   sinon.stub(sqs, 'createQueue').callsArgWithAsync(1, null, { QueueUrl: 'http://test:c' })
 })
 
@@ -66,14 +66,14 @@ test.serial('should handle consumer handler timeout', t => {
     .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
 
   const consumer = c3.onMessage(
-    (message, done) => {
+    () => {
       // do nothing, wait for timeout
     },
     { visibilityTimeout: 1 },
   )
 
   return new Bluebird((resolve, reject) => {
-    consumer.on('error', (msg, err) => {
+    consumer.on('error', msg => {
       try {
         t.is(msg, 'Consumer[c3] handler error')
       } catch (e) {

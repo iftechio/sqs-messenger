@@ -1,10 +1,12 @@
-const debug = require('debug')('sqs-messenger:queue')
+import * as Debug from 'debug'
 import * as Bluebird from 'bluebird'
 import { EventEmitter } from 'events'
 import { SQS } from 'aws-sdk'
 
 import Consumer from './consumer'
 import Config from './config'
+
+const debug = Debug('sqs-messenger:queue')
 
 class Queue extends EventEmitter {
   sqs: SQS
@@ -96,7 +98,7 @@ class Queue extends EventEmitter {
           },
         }
 
-    await new Promise((resolve, reject) => {
+    await new Promise(resolve => {
       if (opts.withDeadLetter) {
         const deadLetterQueueName = `${this.name}-dl`
 

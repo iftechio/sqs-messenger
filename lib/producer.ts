@@ -16,13 +16,14 @@ class Producer {
   /**
    * Send message to topic.
    */
-  async sendTopic<T = any>(topic: Topic, message: T): Promise<SNS.Types.PublishResponse> {
-    const metaAttachedMessage = Object.assign(
-      {
-        _meta: { topicName: topic.name },
-      },
-      message,
-    )
+  async sendTopic<T extends object = any>(
+    topic: Topic,
+    message: T,
+  ): Promise<SNS.Types.PublishResponse> {
+    const metaAttachedMessage = {
+      _meta: { topicName: topic.name },
+      ...(message as object),
+    }
     const encodedMessage = JSON.stringify(metaAttachedMessage)
     return new Bluebird(resolve => {
       if (topic.isReady) {
@@ -50,12 +51,12 @@ class Producer {
   /**
    * Send message to queue
    */
-  async sendQueue<T = any>(
+  async sendQueue<T extends object = any>(
     queue: Queue,
     message: T,
     opts?: { DelaySeconds?: number },
   ): Promise<SQS.Types.SendMessageResult> {
-    const metaAttachedMessage = Object.assign({ _meta: {} }, message)
+    const metaAttachedMessage = { _meta: {}, ...(message as object) }
     const encodedMessage = JSON.stringify(metaAttachedMessage)
     return new Bluebird(resolve => {
       if (queue.isReady) {

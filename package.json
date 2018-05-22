@@ -8,8 +8,9 @@
     "compile": "tsc",
     "clean": "rm -rf dist",
     "purge": "rm -rf package-lock.json node_modules && npm run clean",
-    "test": "rm -rf dist && tsc && AWS_ACCESS_KEY_ID=ABCDEF AWS_SECRET_ACCESS_KEY=ABCDEF ava -T 10000 dist/tests",
-    "prettier": "prettier --config .prettierrc --write '{lib,tests}/**/*.ts' index.ts",
+    "test": "rm -rf dist && npm run lint && tsc && AWS_ACCESS_KEY_ID=ABCDEF AWS_SECRET_ACCESS_KEY=ABCDEF ava -T 10000 dist/tests",
+    "lint": "tslint --project .",
+    "prettier": "prettier --config .prettierrc --write '{lib,tests,examples}/**/*.ts' index.ts",
     "prepublishOnly": "npm run compile"
   },
   "dependencies": {
@@ -27,6 +28,9 @@
     "aws-sdk": "2.244.1",
     "sinon": "5.0.7",
     "source-map-support": "0.5.6",
+    "tslint": "5.10.0",
+    "tslint-config-prettier": "1.13.0",
+    "tslint-jike-node": "0.0.14",
     "typescript": "2.8.3"
   },
   "author": "",

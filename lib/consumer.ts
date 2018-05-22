@@ -1,9 +1,11 @@
-const debug = require('debug')('sqs-messenger:consumer')
+import * as Debug from 'debug'
 import * as Bluebird from 'bluebird'
 import { EventEmitter } from 'events'
 import { SQS } from 'aws-sdk'
 
 import Queue from './queue'
+
+const debug = Debug('sqs-messenger:consumer')
 
 class Consumer<T = any> extends EventEmitter {
   queue: Queue
@@ -73,8 +75,8 @@ class Consumer<T = any> extends EventEmitter {
         .then(() => {
           this._pull()
         })
-        .catch(err => {
-          this.emit('error', `Consumer[${this.queue.name}] processingMessages error`, err)
+        .catch(err2 => {
+          this.emit('error', `Consumer[${this.queue.name}] processingMessages error`, err2)
           this._pull()
         })
     } else {

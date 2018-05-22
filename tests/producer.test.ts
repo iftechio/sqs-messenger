@@ -25,7 +25,7 @@ test('should send to topic', t => {
     .callsArgWithAsync(1, null, {})
 
   const message = { text: 'abc' }
-  const metaAttachedMessage = Object.assign({ _meta: { topicName: 'testTopic' } }, message)
+  const metaAttachedMessage = { _meta: { topicName: 'testTopic' }, ...message }
   return producer
     .sendTopic(
       {
@@ -52,7 +52,7 @@ test('should send to queue', t => {
     .callsArgWithAsync(1, null, {})
 
   const message = { text: 'abc' }
-  const metaAttachedMessage = Object.assign({ _meta: {} }, message)
+  const metaAttachedMessage = { _meta: {}, ...message }
   return producer
     .sendQueue(
       {
