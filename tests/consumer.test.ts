@@ -13,14 +13,14 @@ const sqs = new SQS({
   apiVersion: '2012-11-05',
 })
 
-test.before(t => {
-  sinon.stub(sqs, 'createQueue')
-    .callsArgWithAsync(1, null, { QueueUrl: 'http://test:c' })
+test.before(() => {
+  sinon.stub(sqs, 'createQueue').callsArgWithAsync(1, null, { QueueUrl: 'http://test:c' })
 })
 
 test.cb.serial('should receive message', t => {
   const c1 = new Queue(sqs, 'c1', {}, config)
-  t.context.sandbox.stub(sqs, 'receiveMessage')
+  t.context.sandbox
+    .stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
 
@@ -33,11 +33,14 @@ test.cb.serial('should receive message', t => {
 
 test.cb.serial('should delete message on done', t => {
   const c2 = new Queue(sqs, 'c2', {}, config)
-  t.context.sandbox.stub(sqs, 'receiveMessage')
+  t.context.sandbox
+    .stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, { Messages: [{ ReceiptHandle: '1', Body: '{"text":"hahaha"}' }] })
 
-  const mock = t.context.sandbox.mock(sqs).expects('deleteMessage')
+  const mock = t.context.sandbox
+    .mock(sqs)
+    .expects('deleteMessage')
     .once()
     .withArgs({
       QueueUrl: 'http://test:c',
@@ -57,16 +60,20 @@ test.cb.serial('should delete message on done', t => {
 
 test.serial('should handle consumer handler timeout', t => {
   const c3 = new Queue(sqs, 'c3', {}, config)
-  t.context.sandbox.stub(sqs, 'receiveMessage')
+  t.context.sandbox
+    .stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
 
-  const consumer = c3.onMessage((message, done) => {
-    // do nothing, wait for timeout
-  }, { visibilityTimeout: 1 })
+  const consumer = c3.onMessage(
+    () => {
+      // do nothing, wait for timeout
+    },
+    { visibilityTimeout: 1 },
+  )
 
   return new Bluebird((resolve, reject) => {
-    consumer.on('error', (msg, err) => {
+    consumer.on('error', msg => {
       try {
         t.is(msg, 'Consumer[c3] handler error')
       } catch (e) {
@@ -79,7 +86,8 @@ test.serial('should handle consumer handler timeout', t => {
 
 test.cb.serial('should delete batch messages on done', t => {
   const c4 = new Queue(sqs, 'c4', {}, config)
-  t.context.sandbox.stub(sqs, 'receiveMessage')
+  t.context.sandbox
+    .stub(sqs, 'receiveMessage')
     .onFirstCall()
     .callsArgWithAsync(1, null, {
       Messages: [
@@ -87,10 +95,12 @@ test.cb.serial('should delete batch messages on done', t => {
         { ReceiptHandle: '2', Body: '{"text":"hahaha2"}' },
         { ReceiptHandle: '3', Body: '{"text":"hahaha3"}' },
         { ReceiptHandle: '4', Body: '{"text":"hahaha4"}' },
-      ]
+      ],
     })
 
-  const mock = t.context.sandbox.mock(sqs).expects('deleteMessageBatch')
+  const mock = t.context.sandbox
+    .mock(sqs)
+    .expects('deleteMessageBatch')
     .once()
     .withArgs({
       QueueUrl: 'http://test:c',
@@ -99,19 +109,22 @@ test.cb.serial('should delete batch messages on done', t => {
         { Id: '1', ReceiptHandle: '2' },
         { Id: '2', ReceiptHandle: '3' },
         { Id: '3', ReceiptHandle: '4' },
-      ]
+      ],
     })
     .callsArgWithAsync(1, null, null)
 
-  c4.onMessage((messages, done) => {
-    t.deepEqual(messages, [
-      { text: 'hahaha1' },
-      { text: 'hahaha2' },
-      { text: 'hahaha3' },
-      { text: 'hahaha4' },
-    ])
-    done()
-  }, { batchHandle: true })
+  c4.onMessage(
+    (messages, done) => {
+      t.deepEqual(messages, [
+        { text: 'hahaha1' },
+        { text: 'hahaha2' },
+        { text: 'hahaha3' },
+        { text: 'hahaha4' },
+      ])
+      done()
+    },
+    { batchHandle: true },
+  )
   setTimeout(() => {
     mock.verify()
     t.end()

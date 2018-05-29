@@ -1,10 +1,12 @@
-const debug = require('debug')('sqs-messenger:queue')
+import * as Debug from 'debug'
 import * as Bluebird from 'bluebird'
 import { EventEmitter } from 'events'
 import { SQS } from 'aws-sdk'
 
 import Consumer from './consumer'
 import Config from './config'
+
+const debug = Debug('sqs-messenger:queue')
 
 class Queue extends EventEmitter {
   sqs: SQS
@@ -25,21 +27,27 @@ class Queue extends EventEmitter {
   deadLetterQueue: Queue
   config: Config
 
-  constructor(sqs: SQS, name: string, opts: {
-    withDeadLetter?: boolean
-    visibilityTimeout?: number
-    maximumMessageSize?: number
-    isDeadLetterQueue?: boolean
-    maxReceiveCount?: number
-    delaySeconds?: number
-  }, config: Config) {
+  constructor(
+    sqs: SQS,
+    name: string,
+    opts: {
+      withDeadLetter?: boolean
+      visibilityTimeout?: number
+      maximumMessageSize?: number
+      isDeadLetterQueue?: boolean
+      maxReceiveCount?: number
+      delaySeconds?: number
+    },
+    config: Config,
+  ) {
     super()
     this.sqs = sqs
     this.opts = {
-      withDeadLetter: (typeof opts.withDeadLetter === 'boolean') ? opts.withDeadLetter : false,
+      withDeadLetter: typeof opts.withDeadLetter === 'boolean' ? opts.withDeadLetter : false,
       visibilityTimeout: (opts.visibilityTimeout || 30).toString(),
       maximumMessageSize: (opts.maximumMessageSize || 262144).toString(),
-      isDeadLetterQueue: (typeof opts.isDeadLetterQueue === 'boolean') ? opts.isDeadLetterQueue : false,
+      isDeadLetterQueue:
+        typeof opts.isDeadLetterQueue === 'boolean' ? opts.isDeadLetterQueue : false,
       maxReceiveCount: opts.maxReceiveCount || 5,
       delaySeconds: (opts.delaySeconds || 0).toString(),
     }
@@ -50,12 +58,15 @@ class Queue extends EventEmitter {
     this.consumers = []
     this.config = config
 
-    this._createQueue().then(data => {
-      debug('Queue created', data)
-      this.queueUrl = data.QueueUrl!
-      this.isReady = true
-      this.emit('ready')
-    }, error => this.emit('error', error))
+    this._createQueue().then(
+      data => {
+        debug('Queue created', data)
+        this.queueUrl = data.QueueUrl!
+        this.isReady = true
+        this.emit('ready')
+      },
+      error => this.emit('error', error),
+    )
   }
 
   async _createQueue(): Promise<{ QueueUrl?: string }> {
@@ -63,14 +74,15 @@ class Queue extends EventEmitter {
     const opts = this.opts
     const createParams: SQS.Types.CreateQueueRequest = opts.isDeadLetterQueue
       ? {
-        QueueName: this.realName,
-      } : {
-        QueueName: this.realName,
-        Attributes: {
-          MaximumMessageSize: opts.maximumMessageSize,
-          VisibilityTimeout: opts.visibilityTimeout,
-          DelaySeconds: opts.delaySeconds,
-          Policy: `{
+          QueueName: this.realName,
+        }
+      : {
+          QueueName: this.realName,
+          Attributes: {
+            MaximumMessageSize: opts.maximumMessageSize,
+            VisibilityTimeout: opts.visibilityTimeout,
+            DelaySeconds: opts.delaySeconds,
+            Policy: `{
             "Version": "2012-10-17",
             "Id": "${this.config.sqsArnPrefix}${this.realName}/SQSDefaultPolicy",
             "Statement": [
@@ -83,19 +95,26 @@ class Queue extends EventEmitter {
               }
             ]
           }`.replace(/\s/g, ''),
-        },
-      }
+          },
+        }
 
-    await new Promise((resolve, reject) => {
+    await new Promise(resolve => {
       if (opts.withDeadLetter) {
         const deadLetterQueueName = `${this.name}-dl`
 
         debug('Creating dead letter Queue', deadLetterQueueName)
-        const deadLetterQueue = new Queue(this.sqs, deadLetterQueueName, { isDeadLetterQueue: true }, this.config)
+        const deadLetterQueue = new Queue(
+          this.sqs,
+          deadLetterQueueName,
+          { isDeadLetterQueue: true },
+          this.config,
+        )
         this.deadLetterQueue = deadLetterQueue
 
         // set redrive policy on origin queue
-        createParams.Attributes!.RedrivePolicy = `{"maxReceiveCount":"${opts.maxReceiveCount}", "deadLetterTargetArn":"${this.config.sqsArnPrefix}${deadLetterQueue.realName}"}`
+        createParams.Attributes!.RedrivePolicy = `{"maxReceiveCount":"${
+          opts.maxReceiveCount
+        }", "deadLetterTargetArn":"${this.config.sqsArnPrefix}${deadLetterQueue.realName}"}`
 
         deadLetterQueue.on('ready', () => {
           resolve()
@@ -124,11 +143,14 @@ class Queue extends EventEmitter {
   /**
    * Register a consumer handler on a queue.
    */
-  onMessage<T = any>(handler: (message: T | T[], callback: (err?: Error) => void) => void, opts?: {
-    batchSize?: number
-    visibilityTimeout?: number
-    batchHandle?: boolean
-  }): Consumer<T> {
+  onMessage<T = any>(
+    handler: (message: T | T[], callback: (err?: Error) => void) => void,
+    opts?: {
+      batchSize?: number
+      visibilityTimeout?: number
+      batchHandle?: boolean
+    },
+  ): Consumer<T> {
     const consumer = new Consumer<T>(this, handler, opts)
     this.consumers.push(consumer)
     return consumer
@@ -138,7 +160,7 @@ class Queue extends EventEmitter {
    * Gracefully shutdown each consumer within `timeout`
    */
   async shutdown(timeout: number): Promise<void[]> {
-    return Bluebird.map(this.consumers, (consumer) => {
+    return Bluebird.map(this.consumers, consumer => {
       return consumer.shutdown(timeout)
     })
   }

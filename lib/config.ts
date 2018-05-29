@@ -4,12 +4,14 @@ class Config {
   queueUrlPrefix = 'http://sqs.test/'
   resourceNamePrefix = ''
 
-  constructor(conf: {
-    snsArnPrefix?: string
-    sqsArnPrefix?: string
-    queueUrlPrefix?: string
-    resourceNamePrefix?: string
-  } = {}) {
+  constructor(
+    conf: {
+      snsArnPrefix?: string
+      sqsArnPrefix?: string
+      queueUrlPrefix?: string
+      resourceNamePrefix?: string
+    } = {},
+  ) {
     this.snsArnPrefix = conf.snsArnPrefix || this.snsArnPrefix
     this.sqsArnPrefix = conf.sqsArnPrefix || this.sqsArnPrefix
     this.queueUrlPrefix = conf.queueUrlPrefix || this.queueUrlPrefix

@@ -1,0 +1,6 @@
+{
+  "extends": [
+    "tslint-jike-node",
+    "tslint-config-prettier"
+  ]
+}

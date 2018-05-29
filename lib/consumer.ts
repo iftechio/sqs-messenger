@@ -1,9 +1,11 @@
-const debug = require('debug')('sqs-messenger:consumer')
+import * as Debug from 'debug'
 import * as Bluebird from 'bluebird'
 import { EventEmitter } from 'events'
 import { SQS } from 'aws-sdk'
 
 import Queue from './queue'
+
+const debug = Debug('sqs-messenger:consumer')
 
 class Consumer<T = any> extends EventEmitter {
   queue: Queue
@@ -14,11 +16,15 @@ class Consumer<T = any> extends EventEmitter {
   handler: (message: T | T[], callback: (err?: Error) => void) => void
   processingMessagesPromise?: Promise<void>
 
-  constructor(queue: Queue, handler: (message: T | T[], callback: (err?: Error) => void) => void, opts: {
-    batchSize?: number
-    visibilityTimeout?: number
-    batchHandle?: boolean
-  } = {}) {
+  constructor(
+    queue: Queue,
+    handler: (message: T | T[], callback: (err?: Error) => void) => void,
+    opts: {
+      batchSize?: number
+      visibilityTimeout?: number
+      batchHandle?: boolean
+    } = {},
+  ) {
     super()
     this.queue = queue
     this.batchSize = opts.batchSize || 10
@@ -40,14 +46,17 @@ class Consumer<T = any> extends EventEmitter {
   _pull(): void {
     if (this.running) {
       debug('Polling for messages')
-      this.queue.sqs.receiveMessage({
-        QueueUrl: this.queue.queueUrl,
-        MaxNumberOfMessages: this.batchSize,
-        WaitTimeSeconds: 20, // max time long polling
-        VisibilityTimeout: this.visibilityTimeout,
-      }, (err, data) => {
-        this._handleSqsResponse(err, data)
-      })
+      this.queue.sqs.receiveMessage(
+        {
+          QueueUrl: this.queue.queueUrl,
+          MaxNumberOfMessages: this.batchSize,
+          WaitTimeSeconds: 20, // max time long polling
+          VisibilityTimeout: this.visibilityTimeout,
+        },
+        (err, data) => {
+          this._handleSqsResponse(err, data)
+        },
+      )
     }
   }
 
@@ -62,12 +71,14 @@ class Consumer<T = any> extends EventEmitter {
     if (response && response.Messages && response.Messages.length) {
       debug('Handle messages', response.Messages.length)
       this.processingMessagesPromise = this._processMessage(response.Messages)
-      this.processingMessagesPromise.then(() => {
-        this._pull()
-      }).catch(err => {
-        this.emit('error', `Consumer[${this.queue.name}] processingMessages error`, err)
-        this._pull()
-      })
+      this.processingMessagesPromise
+        .then(() => {
+          this._pull()
+        })
+        .catch(err2 => {
+          this.emit('error', `Consumer[${this.queue.name}] processingMessages error`, err2)
+          this._pull()
+        })
     } else {
       this._pull()
     }
@@ -80,41 +91,43 @@ class Consumer<T = any> extends EventEmitter {
     debug('Processing message, %o', messages)
     const decodedMessages = messages.map(message => message.Body && JSON.parse(message.Body))
 
-    return (this.batchHandle ?
-      new Bluebird<void>((resolve, reject) => {
-        this.handler(decodedMessages, err => {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(this._deleteMessageBatch(messages))
-          }
-        })
-      }) :
-      Bluebird.map(decodedMessages, (decodedMessage, i) => {
-        return new Promise((resolve, reject) => {
-          this.handler(decodedMessage, err => {
+    return (this.batchHandle
+      ? new Bluebird<void>((resolve, reject) => {
+          this.handler(decodedMessages, err => {
             if (err) {
               reject(err)
             } else {
-              resolve(this._deleteMessage(messages[i]))
+              resolve(this._deleteMessageBatch(messages))
             }
           })
         })
+      : Bluebird.map(decodedMessages, (decodedMessage, i) => {
+          return new Promise((resolve, reject) => {
+            this.handler(decodedMessage, err => {
+              if (err) {
+                reject(err)
+              } else {
+                resolve(this._deleteMessage(messages[i]))
+              }
+            })
+          })
+        })
+    )
+      .timeout(this.visibilityTimeout * 1000)
+      .catch(err => {
+        // catch error
+        if (err instanceof Bluebird.TimeoutError) {
+          debug('Message handler timeout, %o', messages)
+        } else {
+          debug('Message handler reject', err)
+        }
+        this.emit('error', `Consumer[${this.queue.name}] handler error`, err)
       })
-    ).timeout(this.visibilityTimeout * 1000).catch(err => {
-      // catch error
-      if (err instanceof Bluebird.TimeoutError) {
-        debug('Message handler timeout, %o', messages)
-      } else {
-        debug('Message handler reject', err)
-      }
-      this.emit('error', `Consumer[${this.queue.name}] handler error`, err)
-    })
   }
 
   /**
    * Delete message from queue if it's handled correctly.
-  */
+   */
   async _deleteMessage(message: SQS.Message): Promise<void> {
     const deleteParams = {
       QueueUrl: this.queue.queueUrl,
@@ -135,7 +148,7 @@ class Consumer<T = any> extends EventEmitter {
       Entries: messages.map((message, i) => ({
         Id: i.toString(),
         ReceiptHandle: message.ReceiptHandle!,
-      }))
+      })),
     }
 
     return new Promise<void>((resolve, reject) => {

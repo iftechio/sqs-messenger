@@ -22,7 +22,10 @@ const sns = new SNS({
 })
 
 test.cb.serial('should create topic', t => {
-  const mock = t.context.sandbox.mock(sns).expects('createTopic').once()
+  const mock = t.context.sandbox
+    .mock(sns)
+    .expects('createTopic')
+    .once()
     .withArgs({ Name: 'test_t1' })
     .callsArgWithAsync(1, null, { TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
 
@@ -34,30 +37,38 @@ test.cb.serial('should create topic', t => {
 })
 
 test.serial('should bind queue', t => {
-  t.context.sandbox.stub(sns, 'createTopic').callsArgWithAsync(1, null, { TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
-  t.context.sandbox.stub(sqs, 'createQueue').callsArgWithAsync(1, null, { QueueUrl: 'http://test/tq1' })
+  t.context.sandbox
+    .stub(sns, 'createTopic')
+    .callsArgWithAsync(1, null, { TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
+  t.context.sandbox
+    .stub(sqs, 'createQueue')
+    .callsArgWithAsync(1, null, { QueueUrl: 'http://test/tq1' })
 
-  const subStub = t.context.sandbox.mock(sns).expects('subscribe').once()
+  const subStub = t.context.sandbox
+    .mock(sns)
+    .expects('subscribe')
+    .once()
     .callsArgWithAsync(1, null, { SubscriptionArn: 'arn:subscription' })
-  const setAttrStub = t.context.sandbox.stub(sns, 'setSubscriptionAttributes').callsArgWithAsync(1, null, {})
+  const setAttrStub = t.context.sandbox
+    .stub(sns, 'setSubscriptionAttributes')
+    .callsArgWithAsync(1, null, {})
 
   const tq = new Queue(sqs, 'tq', {}, config)
   const t2 = new Topic(sns, 't2', config)
-  t2.subscribe(tq)
+  t2.subscribe(tq).catch(console.error)
 
-  return Bluebird.delay(200)
-    .then(() => {
-      t.truthy(subStub.calledOnce)
-      t.truthy(setAttrStub.calledOnce)
-      t.deepEqual(subStub.firstCall.args[0], {
-        Protocol: 'sqs',
-        TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1',
-        Endpoint: 'arn:sqs:test:test_tq',
-      })
-      t.deepEqual(setAttrStub.firstCall.args[0], {
-        SubscriptionArn: 'arn:subscription',
-        AttributeName: 'RawMessageDelivery',
-        AttributeValue: 'true',
-      })
+  return Bluebird.delay(200).then(() => {
+    t.truthy(subStub.calledOnce)
+    t.truthy(setAttrStub.calledOnce)
+    t.deepEqual(subStub.firstCall.args[0], {
+      Protocol: 'sqs',
+      TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1',
+      Endpoint: 'arn:sqs:test:test_tq',
     })
+    t.deepEqual(setAttrStub.firstCall.args[0], {
+      SubscriptionArn: 'arn:subscription',
+      AttributeName: 'RawMessageDelivery',
+      AttributeValue: 'true',
+    })
+  })
 })
