@@ -60,7 +60,7 @@ class Messenger {
   ): Consumer<T> | Consumer<T>[] {
     const queue = this.queueMap[queueName]
     if (!queue) {
-      throw new Error('Queue not found')
+      throw new Error('Queue not found: ' + queueName)
     }
 
     const consumers: Consumer<T>[] = []
