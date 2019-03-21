@@ -26,7 +26,7 @@ class Topic extends EventEmitter {
       if (err) {
         this.emit('error', err)
       } else {
-        debug('topic created', data)
+        debug('topic created %j', data)
         this.arn = data.TopicArn || ''
         this.isReady = true
         this.emit('ready')
