@@ -32,7 +32,7 @@ class Producer {
         topic.on('ready', () => resolve())
       }
     })
-      .timeout(2000)
+      .timeout(2000, `topic ${topic.name} is not ready within 2000ms`)
       .then(() => {
         return new Promise((resolve, reject) => {
           this.sns.publish(
@@ -65,7 +65,7 @@ class Producer {
         queue.on('ready', () => resolve())
       }
     })
-      .timeout(2000)
+      .timeout(2000, `queue ${queue.name} is not ready within 2000ms`)
       .then(() => {
         return new Promise((resolve, reject) => {
           this.sqs.sendMessage(
