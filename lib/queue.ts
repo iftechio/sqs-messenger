@@ -26,6 +26,7 @@ class Queue extends EventEmitter {
   queueUrl: string
   deadLetterQueue: Queue
   config: Config
+  preexisting: boolean
 
   constructor(
     sqs: SQS,
@@ -57,16 +58,29 @@ class Queue extends EventEmitter {
     this.isReady = false
     this.consumers = []
     this.config = config
+    this.queueUrl = this.config.queueUrlPrefix + this.realName
 
-    this._createQueue().then(
-      data => {
-        debug('Queue created', data)
-        this.queueUrl = data.QueueUrl!
+    this.sqs.getQueueAttributes({ QueueUrl: this.queueUrl }, err => {
+      if (!err) {
+        debug('Queue exists', this.realName)
+        this.preexisting = true
         this.isReady = true
         this.emit('ready')
-      },
-      error => this.emit('error', error),
-    )
+        return
+      }
+      if (err.code === 'AWS.SimpleQueueService.NonExistentQueue') {
+        this._createQueue().then(
+          data => {
+            debug('Queue created %j', data)
+            this.isReady = true
+            this.emit('ready')
+          },
+          error => this.emit('error', error),
+        )
+      } else {
+        this.emit('error', err)
+      }
+    })
   }
 
   async _createQueue(): Promise<{ QueueUrl?: string }> {

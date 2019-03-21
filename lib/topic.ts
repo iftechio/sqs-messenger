@@ -19,15 +19,31 @@ class Topic extends EventEmitter {
     this.sns = sns
     this.name = name
     this.realName = config.resourceNamePrefix + name
+    this.arn = config.snsArnPrefix + this.realName
     this.isReady = false
 
+    this.sns.getTopicAttributes({ TopicArn: this.arn }, err => {
+      if (err) {
+        if (err.code === 'NotFound') {
+          this._createTopic()
+        } else {
+          this.emit('error', err)
+        }
+      } else {
+        debug('topic exists', this.realName)
+        this.isReady = true
+        this.emit('ready')
+      }
+    })
+  }
+
+  _createTopic() {
     debug(`Create topic ${this.name}`)
     this.sns.createTopic({ Name: this.realName }, (err, data) => {
       if (err) {
         this.emit('error', err)
       } else {
-        debug('topic created', data)
-        this.arn = data.TopicArn || ''
+        debug('topic created %j', data)
         this.isReady = true
         this.emit('ready')
       }
@@ -38,6 +54,11 @@ class Topic extends EventEmitter {
    * Subscribe queue to topic, queue must be declared already.
    */
   async subscribe(queue: Queue): Promise<void> {
+    // 如果一个 queue 先前已经存在，我们认为它不需要重复订阅 topic 了
+    if (queue.preexisting) {
+      return
+    }
+
     if (!this.isReady) {
       await new Promise(resolve => {
         this.on('ready', () => resolve())
