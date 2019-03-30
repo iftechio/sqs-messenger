@@ -176,6 +176,19 @@ class Messenger {
       return queue.shutdown(timeout)
     })
   }
+
+  async ready(): Promise<void> {
+    await Promise.all(
+      [...Object.values(this.queueMap), ...Object.values(this.topicMap)].map(async item => {
+        if (item.isReady) {
+          return
+        }
+        return new Promise(resolve => {
+          item.on('ready', () => resolve())
+        })
+      }),
+    )
+  }
 }
 
 export default Messenger
