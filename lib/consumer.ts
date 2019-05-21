@@ -65,7 +65,8 @@ class Consumer<T = any> extends EventEmitter {
    */
   _handleSqsResponse(err: Error, response: SQS.ReceiveMessageResult): void {
     if (err) {
-      this.emit('error', 'Error receiving sqs message', err)
+      err.message = `Error receiving sqs message: ${err.message}`
+      this.emit('error', err)
     }
     debug('Response received', response)
     if (response && response.Messages && response.Messages.length) {
@@ -75,8 +76,9 @@ class Consumer<T = any> extends EventEmitter {
         .then(() => {
           this._pull()
         })
-        .catch(err2 => {
-          this.emit('error', `Consumer[${this.queue.name}] processingMessages error`, err2)
+        .catch((err2: Error) => {
+          err2.message = `Consumer[${this.queue.name}] processingMessages error: ${err2.message}`
+          this.emit('error', err2)
           this._pull()
         })
     } else {
@@ -114,14 +116,15 @@ class Consumer<T = any> extends EventEmitter {
         })
     )
       .timeout(this.visibilityTimeout * 1000)
-      .catch(err => {
+      .catch((err: Error) => {
         // catch error
         if (err instanceof Bluebird.TimeoutError) {
           debug('Message handler timeout, %o', messages)
         } else {
           debug('Message handler reject', err)
         }
-        this.emit('error', `Consumer[${this.queue.name}] handler error`, err)
+        err.message = `Consumer[${this.queue.name}] handler error: ${err.message}`
+        this.emit('error', err)
       })
   }
 
