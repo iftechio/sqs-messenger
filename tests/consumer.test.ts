@@ -72,13 +72,9 @@ test.serial('should handle consumer handler timeout', t => {
     { visibilityTimeout: 1 },
   )
 
-  return new Bluebird((resolve, reject) => {
-    consumer.on('error', msg => {
-      try {
-        t.is(msg, 'Consumer[c3] handler error')
-      } catch (e) {
-        reject(e)
-      }
+  return new Bluebird(resolve => {
+    consumer.on('error', err => {
+      t.is(err.message, 'Consumer[c3] handler error: operation timed out')
       resolve()
     })
   }).timeout(2000)
