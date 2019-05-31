@@ -28,7 +28,7 @@ class Consumer<T = any> extends EventEmitter {
     super()
     this.queue = queue
     this.batchSize = opts.batchSize || 10
-    this.visibilityTimeout = opts.visibilityTimeout || 30
+    this.visibilityTimeout = opts.visibilityTimeout || parseInt(queue.opts.visibilityTimeout) || 30
     this.batchHandle = !!opts.batchHandle
     this.running = false
     this.handler = handler
