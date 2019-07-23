@@ -24,11 +24,11 @@
   },
   "devDependencies": {
     "@types/sinon": "4.3.3",
-    "ava": "0.25.0",
+    "ava": "^0.25.0",
     "aws-sdk": "2.244.1",
     "sinon": "5.0.7",
     "source-map-support": "0.5.6",
-    "tslint": "5.10.0",
+    "tslint": "^5.18.0",
     "tslint-config-prettier": "1.13.0",
     "tslint-jike-node": "0.0.14",
     "typescript": "2.8.3"
