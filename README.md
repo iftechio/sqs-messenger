@@ -1,11 +1,12 @@
 sqs-messenger
 ===
+
 This library makes message sending/receiving in SQS/SNS easy.
 
 ## Simple usage
 ```javascript
 const AWS = require('aws-sdk')
-const SqsMessenger = require('../lib/messenger')
+const SqsMessenger = require('sqs-messenger')
 
 const sqs = new AWS.SQS({
   region: 'cn-north-1',
@@ -16,6 +17,7 @@ const sns = new AWS.SNS({
   region: 'cn-north-1',
   sns: '2010-03-31',
 })
+
 const sqsMessenger = new SqsMessenger({ sqs, sns }, {
   snsArnPrefix: 'arn:aws-cn:sns:cn-north-1:123456789012:',
   sqsArnPrefix: 'arn:aws-cn:sqs:cn-north-1:123456789012:',
