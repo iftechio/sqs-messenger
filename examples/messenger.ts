@@ -1,43 +1,25 @@
-import { SQS, SNS } from 'aws-sdk'
-import SqsMessenger from '../lib/messenger'
+import * as MNS from '@ruguoapp/mns-node-sdk'
+import MnsMessenger from '../lib/messenger'
 
-const sqs = new SQS({
-  region: 'cn-north-1',
-  apiVersion: '2012-11-05',
+const mns = new MNS.Client('<account-id>', '<region>', '<access-key-id>', '<access-key-secret>')
+
+const mnsMessenger = new MnsMessenger(mns, err => {
+  console.log('Error handled')
+  console.error(err.stack)
 })
 
-const sns = new SNS({
-  region: 'cn-north-1',
-  apiVersion: '2010-03-31',
-})
-
-const sqsMessenger = new SqsMessenger(
-  { sqs, sns },
-  {
-    snsArnPrefix: 'arn:aws-cn:sns:cn-north-1:123456789012:',
-    sqsArnPrefix: 'arn:aws-cn:sqs:cn-north-1:123456789012:',
-    queueUrlPrefix: 'http://sqs.cn-north-1.amazonaws.com.cn/123456789012/',
-    resourceNamePrefix: 'test_',
-    errorHandler: err => {
-      console.log('Error handled')
-      console.error(err.stack)
-    },
-  },
-)
-
-const myTopic = sqsMessenger.createTopic('myTopic')
-const myQueue = sqsMessenger.createQueue('myQueue', {
+const myTopic = mnsMessenger.createTopic('myTopic')
+const myQueue = mnsMessenger.createQueue('myQueue', {
   bindTopic: myTopic,
-  withDeadLetter: true,
 })
 
 // tslint:disable-next-line:no-unused
-myQueue.deadLetterQueue.onMessage((messsage, done) => {
+myQueue.onMessage((messsage, done) => {
   // do something
   done()
 })
 // register consumer on queue
-sqsMessenger.onBatch(
+mnsMessenger.onBatch(
   'myQueue',
   (message, done) => {
     // do something
@@ -50,11 +32,11 @@ sqsMessenger.onBatch(
 )
 
 // send message to topic
-sqsMessenger
+mnsMessenger
   .sendTopicMessage('myTopic', { text: 'a simple message send to topic' })
   .catch(console.error)
 
 // send message to queue
-sqsMessenger
+mnsMessenger
   .sendQueueMessage('myQueue', { text: 'a simple message send directly to queue' })
   .catch(console.error)

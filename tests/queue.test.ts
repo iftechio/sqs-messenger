@@ -1,118 +1,50 @@
 import test from './_init'
 import * as Bluebird from 'bluebird'
 import * as sinon from 'sinon'
-import { SQS } from 'aws-sdk'
+import * as MNS from '@ruguoapp/mns-node-sdk'
 
 import Queue from '../lib/queue'
-import Config from '../lib/config'
 
-const sqs = new SQS({
-  region: 'cn-north-1',
-  apiVersion: '2012-11-05',
-})
-
-const config = new Config({
-  resourceNamePrefix: 'test_',
-  sqsArnPrefix: 'arn:sqs:test:',
-})
+const mns = new MNS.Client('<account-id>', '<region>', '<access-key-id>', '<access-key-secret>')
 
 test.serial('should create queue', t => {
   const mock = t.context.sandbox
-    .mock(sqs)
+    .mock(mns)
     .expects('createQueue')
     .once()
-    .callsArgWithAsync(1, null, {
-      QueueUrl: 'http://test_q1',
+    .resolves({
+      Location: 'http://test_q1',
     })
 
   // tslint:disable-next-line:no-unused-expression
-  new Queue(sqs, 'q1', {}, config)
+  new Queue(mns, 'test_q1')
   return Bluebird.delay(200).then(() => {
     mock.verify()
-    const expectPolicy = JSON.stringify({
-      Version: '2012-10-17',
-      Id: 'arn:sqs:test:test_q1/SQSDefaultPolicy',
-      Statement: [
-        {
-          Sid: '1',
-          Effect: 'Allow',
-          Principal: '*',
-          Action: 'SQS:SendMessage',
-          Resource: 'arn:sqs:test:test_q1',
-        },
-      ],
-    })
-    t.deepEqual(mock.firstCall.args[0], {
-      QueueName: 'test_q1',
-      Attributes: {
-        DelaySeconds: '0',
-        VisibilityTimeout: '30',
-        MaximumMessageSize: '262144',
-        Policy: expectPolicy,
-      },
-    })
-  })
-})
-
-test.serial('should create deadletter queue', t => {
-  const mock = t.context.sandbox
-    .mock(sqs)
-    .expects('createQueue')
-    .twice()
-    .callsArgWithAsync(1, null, {
-      QueueUrl: 'http://test_q1',
-    })
-
-  // tslint:disable-next-line:no-unused-expression
-  new Queue(sqs, 'q2', { withDeadLetter: true }, config)
-  return Bluebird.delay(200).then(() => {
-    mock.verify()
-    t.deepEqual(mock.firstCall.args[0], {
-      QueueName: 'test_q2-dl',
-    })
-
-    const expectPolicy = JSON.stringify({
-      Version: '2012-10-17',
-      Id: 'arn:sqs:test:test_q2/SQSDefaultPolicy',
-      Statement: [
-        {
-          Sid: '1',
-          Effect: 'Allow',
-          Principal: '*',
-          Action: 'SQS:SendMessage',
-          Resource: 'arn:sqs:test:test_q2',
-        },
-      ],
-    })
-
-    t.deepEqual(mock.secondCall.args[0], {
-      QueueName: 'test_q2',
-      Attributes: {
-        DelaySeconds: '0',
-        VisibilityTimeout: '30',
-        MaximumMessageSize: '262144',
-        Policy: expectPolicy,
-        RedrivePolicy: '{"maxReceiveCount":"5", "deadLetterTargetArn":"arn:sqs:test:test_q2-dl"}',
-      },
+    t.deepEqual(mock.firstCall.args[0], 'test_q1')
+    t.deepEqual(mock.firstCall.args[1], {
+      VisibilityTimeout: 30,
+      MaximumMessageSize: 65536,
+      MessageRetentionPeriod: 259200,
+      DelaySeconds: 0,
+      PollingWaitSeconds: 0,
+      LoggingEnabled: false,
     })
   })
 })
 
 function shutdownMacro(t, input, expected) {
   const sandbox = t.context.sandbox
-  sandbox.stub(sqs, 'createQueue').callsArgWithAsync(1, null, {
-    QueueUrl: 'http://test:c',
-  })
-  sandbox
-    .stub(sqs, 'receiveMessage')
-    .onFirstCall()
-    .callsArgWithAsync(1, null, {
-      Messages: [{ Body: '{}' }],
-    })
-  // tslint:disable-next-line:no-unused
-  sandbox.stub(sqs, 'deleteMessage').callsFake((params, callback) => callback())
 
-  const queue = new Queue(sqs, 'q', {}, config)
+  sandbox.stub(mns, 'createQueue').resolves({
+    Location: 'http://test:c',
+  })
+
+  sandbox.stub(mns, 'batchReceiveMessage').resolves([{ MessageBody: '{}' }])
+
+  sandbox.stub(mns, 'deleteMessage').resolves()
+  sandbox.stub(mns, 'batchDeleteMessage').resolves()
+
+  const queue = new Queue(mns, 'q')
   return Bluebird.delay(200).then(() => {
     const spy = sinon.spy()
     // tslint:disable-next-line:no-unused
