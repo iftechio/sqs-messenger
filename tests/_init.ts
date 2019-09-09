@@ -3,7 +3,7 @@ import 'source-map-support/register'
 import * as sinon from 'sinon'
 
 test.beforeEach(t => {
-  t.context.sandbox = sinon.createSandbox()
+  t.context.sandbox = sinon.sandbox.create()
 })
 
 test.afterEach.always(t => {

@@ -1,62 +1,73 @@
 import test from './_init'
+import { SQS, SNS } from 'aws-sdk'
 
 import Producer from '../lib/producer'
 import Topic from '../lib/topic'
 import Queue from '../lib/queue'
-import * as MNS from '@ruguoapp/mns-node-sdk'
 
-const mns = new MNS.Client('<account-id>', '<region>', '<access-key-id>', '<access-key-secret>')
-
-const producer = new Producer(mns)
-
-test('should send to topic', t => {
-  t.context.sandbox
-    .stub(mns, 'createTopic')
-    .resolves({ Location: 'http://test_t1' })
-  const mock = t.context.sandbox
-    .mock(mns)
-    .expects('publishMessage')
-    .once()
-    .resolves({
-      MessageId: 'id',
-      MessageBodyMD5: 'md5'
-    })
-
-  const message = { text: 'abc' }
-  const metaAttachedMessage = { MessageBody: '{"_meta":{"topicName":"t2"},"text":"abc"}' }
-  const t2 = new Topic(mns, 't2')
-  return producer.sendTopic(t2, message)
-    .then(() => {
-      mock.verify()
-      t.deepEqual(mock.firstCall.args[0], t2.name)
-      t.deepEqual(mock.firstCall.args[1], metaAttachedMessage)
-    })
+const sqs = new SQS({
+  region: 'cn-north-1',
+  apiVersion: '2012-11-05',
 })
 
-test('should send to queue', t => {
-  t.context.sandbox
-    .stub(mns, 'createQueue')
-    .resolves({ Location: 'http://test_t1' })
+const sns = new SNS({
+  region: 'cn-north-1',
+  apiVersion: '2010-03-31',
+})
+
+const producer = new Producer({ queueClient: sqs, topicClient: sns })
+
+test('should send to topic', t => {
   const mock = t.context.sandbox
-    .mock(mns)
-    .expects('sendMessage')
+    .mock(sns)
+    .expects('publish')
     .once()
-    .resolves({
-      MessageId: 'id',
-      MessageBodyMD5: 'md5'
-    })
+    .callsArgWithAsync(1, null, {})
 
   const message = { text: 'abc' }
-  const metaAttachedMessage = { MessageBody: '{"_meta":{},"text":"abc"}' }
-  const tq = new Queue(mns, 'tq')
+  const metaAttachedMessage = { _meta: { topicName: 'testTopic' }, ...message }
   return producer
-    .sendQueue(
-      tq,
+    .sendTopic(
+      {
+        isReady: true,
+        arn: 'arn:sns:test',
+        name: 'testTopic',
+      } as Topic,
       message,
     )
     .then(() => {
       mock.verify()
-      t.deepEqual(mock.firstCall.args[0], tq.name)
-      t.deepEqual(mock.firstCall.args[1], metaAttachedMessage)
+      t.deepEqual(mock.firstCall.args[0], {
+        TopicArn: 'arn:sns:test',
+        Message: JSON.stringify(metaAttachedMessage),
+      })
+    })
+})
+
+test('should send to queue', t => {
+  const mock = t.context.sandbox
+    .mock(sqs)
+    .expects('sendMessage')
+    .once()
+    .callsArgWithAsync(1, null, {})
+
+  const message = { text: 'abc' }
+  const metaAttachedMessage = { _meta: {}, ...message }
+  return producer
+    .sendQueue(
+      {
+        isReady: true,
+        arn: 'arn:sqs:test',
+        queueUrl: 'http://sqs.test.com/q1',
+        name: 'testQueue',
+      } as Queue,
+      message,
+    )
+    .then(() => {
+      mock.verify()
+      t.deepEqual(mock.firstCall.args[0], {
+        QueueUrl: 'http://sqs.test.com/q1',
+        MessageBody: JSON.stringify(metaAttachedMessage),
+      })
     })
 })

@@ -1,6 +1,7 @@
 import * as Bluebird from 'bluebird'
-import * as MNS from '@ruguoapp/mns-node-sdk'
 
+import { QueueClient, TopicClient, SendMessageResult, PublishResponse } from './client'
+import Config from './config'
 import Producer from './producer'
 import Queue from './queue'
 import Topic from './topic'
@@ -19,19 +20,29 @@ function loggingErrorHandler(...args) {
 }
 
 class Messenger {
-  mns: MNS.Client
+  queueClient: QueueClient
+  topicClient: TopicClient
   queueMap: { [name: string]: Queue } = {}
   topicMap: { [name: string]: Topic } = {}
+  config: Config
   producer: Producer
   errorHandler: (...args: any[]) => void
 
   constructor(
-    mns: MNS.Client,
-    errorHandler?: (...args: any[]) => void,
+    { queueClient, topicClient }: { queueClient: QueueClient; topicClient: TopicClient },
+    conf: {
+      snsArnPrefix?: string
+      sqsArnPrefix?: string
+      queueUrlPrefix?: string
+      resourceNamePrefix?: string
+      errorHandler?(...args: any[]): void
+    },
   ) {
-    this.mns = mns
-    this.producer = new Producer(mns)
-    this.errorHandler = errorHandler || loggingErrorHandler
+    this.queueClient = queueClient
+    this.topicClient = topicClient
+    this.config = new Config(conf)
+    this.producer = new Producer({ queueClient, topicClient })
+    this.errorHandler = conf.errorHandler || loggingErrorHandler
   }
 
   /**
@@ -91,10 +102,7 @@ class Messenger {
     })
   }
 
-  async sendTopicMessage<T extends object = any>(
-    key: string,
-    msg: T,
-  ): Promise<MNS.Types.PublishMessageResponse> {
+  async sendTopicMessage<T extends object = any>(key: string, msg: T): Promise<PublishResponse> {
     const topic = this.topicMap[key]
     if (!topic) {
       throw new Error(`Topic[${key}] not found`)
@@ -106,7 +114,7 @@ class Messenger {
     key: string,
     msg: T,
     opts?: { DelaySeconds?: number },
-  ): Promise<MNS.Types.SendMessageResponse> {
+  ): Promise<SendMessageResult> {
     const queue = this.queueMap[key]
     if (!queue) {
       throw new Error(`Queue[${key}] not found`)
@@ -117,14 +125,8 @@ class Messenger {
   /**
    * Create a topic with specific name, will declare the SNS topic if not exists
    */
-  createTopic(
-    name: string,
-    opts: {
-      MaximumMessageSize?: number
-      LoggingEnabled?: boolean
-    } = {},
-  ): Topic {
-    const topic = new Topic(this.mns, name, opts)
+  createTopic(name: string): Topic {
+    const topic = new Topic(this.topicClient, name, this.config)
     topic.on('error', this.errorHandler)
 
     this.topicMap[name] = topic
@@ -139,26 +141,23 @@ class Messenger {
     opts: {
       bindTopic?: Topic
       bindTopics?: Topic[]
-      delaySeconds?: number
-      maximumMessageSize?: number
-      messageRetentionPeriod?: number
+      withDeadLetter?: boolean
       visibilityTimeout?: number
-      pollingWaitSeconds?: number
-      loggingEnabled?: boolean
+      maximumMessageSize?: number
+      maxReceiveCount?: number
+      delaySeconds?: number
     } = {},
   ): Queue {
-    const queue = new Queue(this.mns, name, opts)
+    const queue = new Queue(this.queueClient, name, opts, this.config)
     queue.on('error', this.errorHandler)
 
     if (opts.bindTopics || opts.bindTopic) {
       const bindTopics = opts.bindTopics || [opts.bindTopic!]
       // Wait for queue being ready, topic will handle itself if is not ready
       if (queue.isReady) {
-        bindTopics.forEach(topic => topic.subscribe(queue, `${queue.name}-to-${topic.name}`))
+        bindTopics.forEach(topic => topic.subscribe(queue))
       } else {
-        queue.on('ready', () =>
-          bindTopics.forEach(topic => topic.subscribe(queue, `${queue.name}-to-${topic.name}`)),
-        )
+        queue.on('ready', () => bindTopics.forEach(topic => topic.subscribe(queue)))
       }
     }
     this.queueMap[name] = queue

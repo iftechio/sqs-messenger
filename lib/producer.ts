@@ -1,27 +1,28 @@
 import * as Bluebird from 'bluebird'
-import * as MNS from '@ruguoapp/mns-node-sdk'
 
+import { QueueClient, TopicClient, PublishResponse, SendMessageResult } from './client'
 import Queue from './queue'
 import Topic from './topic'
 
 class Producer {
-  mns: MNS.Client
+  queueClient: QueueClient
+  topicClient: TopicClient
 
-  constructor(mns: MNS.Client) {
-    this.mns = mns
+  constructor({
+    queueClient,
+    topicClient,
+  }: {
+    queueClient: QueueClient
+    topicClient: TopicClient
+  }) {
+    this.queueClient = queueClient
+    this.topicClient = topicClient
   }
 
   /**
    * Send message to topic.
    */
-  async sendTopic<T extends object = any>(
-    topic: Topic,
-    message: T,
-    opts?: {
-      MessageTag?: string | undefined
-      MessageAttributes?: any
-    },
-  ): Promise<MNS.Types.PublishMessageResponse> {
+  async sendTopic<T extends object = any>(topic: Topic, message: T): Promise<PublishResponse> {
     const metaAttachedMessage = {
       _meta: { topicName: topic.name },
       ...(message as object),
@@ -29,21 +30,23 @@ class Producer {
     const encodedMessage = JSON.stringify(metaAttachedMessage)
     return new Bluebird(resolve => {
       if (topic.isReady) {
-        resolve({ abc: 1 })
+        resolve()
       } else {
-        topic.on('ready', () => resolve({ abc: 1 }))
+        topic.on('ready', () => resolve())
       }
     })
       .timeout(2000, `topic ${topic.name} is not ready within 2000ms`)
       .then(() => {
         return new Promise((resolve, reject) => {
-          this.mns
-            .publishMessage(topic.name, {
-              MessageBody: encodedMessage,
-              ...opts,
-            })
-            .then(result => resolve(result))
-            .catch(err => reject(err))
+          this.topicClient.publish(
+            {
+              TopicArn: topic.arn,
+              Message: encodedMessage,
+            },
+            (err, result) => {
+              err ? reject(err) : resolve(result)
+            },
+          )
         })
       })
   }
@@ -54,8 +57,8 @@ class Producer {
   async sendQueue<T extends object = any>(
     queue: Queue,
     message: T,
-    opts?: { DelaySeconds?: number; Priority?: number },
-  ): Promise<MNS.Types.SendMessageResponse> {
+    opts?: { DelaySeconds?: number },
+  ): Promise<SendMessageResult> {
     const metaAttachedMessage = { _meta: {}, ...(message as object) }
     const encodedMessage = JSON.stringify(metaAttachedMessage)
     return new Bluebird(resolve => {
@@ -68,13 +71,16 @@ class Producer {
       .timeout(2000, `queue ${queue.name} is not ready within 2000ms`)
       .then(() => {
         return new Promise((resolve, reject) => {
-          this.mns
-            .sendMessage(queue.name, {
-              MessageBody: encodedMessage,
+          this.queueClient.sendMessage(
+            {
               ...opts,
-            })
-            .then(result => resolve(result))
-            .catch(err => reject(err))
+              QueueUrl: queue.queueUrl,
+              MessageBody: encodedMessage,
+            },
+            (err, result) => {
+              err ? reject(err) : resolve(result)
+            },
+          )
         })
       })
   }

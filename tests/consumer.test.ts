@@ -1,19 +1,28 @@
 import test from './_init'
 import * as sinon from 'sinon'
 import * as Bluebird from 'bluebird'
-import * as MNS from '@ruguoapp/mns-node-sdk'
+import { SQS } from 'aws-sdk'
 
 import Queue from '../lib/queue'
+import Config from '../lib/config'
 
-const mns = new MNS.Client('<account-id>', '<region>', '<access-key-id>', '<access-key-secret>')
+const config = new Config()
+
+const sqs = new SQS({
+  region: 'cn-north-1',
+  apiVersion: '2012-11-05',
+})
 
 test.before(() => {
-  sinon.stub(mns, 'createQueue').resolves({ Location: 'http://test:c' })
+  sinon.stub(sqs, 'createQueue').callsArgWithAsync(1, null, { QueueUrl: 'http://test:c' })
 })
 
 test.cb.serial('should receive message', t => {
-  const c1 = new Queue(mns, 'c1')
-  t.context.sandbox.stub(mns, 'batchReceiveMessage').onFirstCall().resolves([{ MessageBody: '{"text":"hahaha"}' }])
+  const c1 = new Queue(sqs, 'c1', {}, config)
+  t.context.sandbox
+    .stub(sqs, 'receiveMessage')
+    .onFirstCall()
+    .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
 
   c1.onMessage((message, done) => {
     t.deepEqual(message, { text: 'hahaha' })
@@ -22,30 +31,39 @@ test.cb.serial('should receive message', t => {
   })
 })
 
-test.only.cb.serial('should delete message on done', t => {
-  const c2 = new Queue(mns, 'c2')
-  t.context.sandbox.stub(mns, 'batchReceiveMessage').resolves([{ ReceiptHandle: '1', MessageBody: '{"text":"hahaha"}' }])
+test.cb.serial('should delete message on done', t => {
+  const c2 = new Queue(sqs, 'c2', {}, config)
+  t.context.sandbox
+    .stub(sqs, 'receiveMessage')
+    .onFirstCall()
+    .callsArgWithAsync(1, null, { Messages: [{ ReceiptHandle: '1', Body: '{"text":"hahaha"}' }] })
 
   const mock = t.context.sandbox
-    .mock(mns)
+    .mock(sqs)
     .expects('deleteMessage')
-    .withExactArgs('c2', 1)
-    .resolves()
+    .once()
+    .withArgs({
+      QueueUrl: 'http://test:c',
+      ReceiptHandle: '1',
+    })
+    .callsArgWithAsync(1, null, null)
 
   c2.onMessage((message, done) => {
     t.deepEqual(message, { text: 'hahaha' })
     done()
-    mock.verify()
   })
-
   setTimeout(() => {
+    mock.verify()
     t.end()
   }, 200)
 })
 
 test.serial('should handle consumer handler timeout', t => {
-  const c3 = new Queue(mns, 'c3')
-  t.context.sandbox.stub(mns, 'batchReceiveMessage').resolves([{ MessageBody: '{"text":"hahaha"}' }])
+  const c3 = new Queue(sqs, 'c3', {}, config)
+  t.context.sandbox
+    .stub(sqs, 'receiveMessage')
+    .onFirstCall()
+    .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
 
   const consumer = c3.onMessage(
     () => {
@@ -63,21 +81,33 @@ test.serial('should handle consumer handler timeout', t => {
 })
 
 test.cb.serial('should delete batch messages on done', t => {
-  const c4 = new Queue(mns, 'c4')
-  t.context.sandbox.stub(mns, 'batchReceiveMessage')
-    .resolves([
-      { ReceiptHandle: '1', MessageBody: '{"text":"hahaha1"}' },
-      { ReceiptHandle: '2', MessageBody: '{"text":"hahaha2"}' },
-      { ReceiptHandle: '3', MessageBody: '{"text":"hahaha3"}' },
-      { ReceiptHandle: '4', MessageBody: '{"text":"hahaha4"}' },
-    ])
+  const c4 = new Queue(sqs, 'c4', {}, config)
+  t.context.sandbox
+    .stub(sqs, 'receiveMessage')
+    .onFirstCall()
+    .callsArgWithAsync(1, null, {
+      Messages: [
+        { ReceiptHandle: '1', Body: '{"text":"hahaha1"}' },
+        { ReceiptHandle: '2', Body: '{"text":"hahaha2"}' },
+        { ReceiptHandle: '3', Body: '{"text":"hahaha3"}' },
+        { ReceiptHandle: '4', Body: '{"text":"hahaha4"}' },
+      ],
+    })
 
   const mock = t.context.sandbox
-    .mock(mns)
-    .expects('batchDeleteMessage')
+    .mock(sqs)
+    .expects('deleteMessageBatch')
     .once()
-    .withArgs('c4', ['1', '2', '3', '4'])
-    .resolves()
+    .withArgs({
+      QueueUrl: 'http://test:c',
+      Entries: [
+        { Id: '0', ReceiptHandle: '1' },
+        { Id: '1', ReceiptHandle: '2' },
+        { Id: '2', ReceiptHandle: '3' },
+        { Id: '3', ReceiptHandle: '4' },
+      ],
+    })
+    .callsArgWithAsync(1, null, null)
 
   c4.onMessage(
     (messages, done) => {
