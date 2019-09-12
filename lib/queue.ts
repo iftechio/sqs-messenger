@@ -5,7 +5,6 @@ import { EventEmitter } from 'events'
 import { Client } from './client'
 import Consumer from './consumer'
 import Config from './config'
-import { SQS } from 'aws-sdk'
 
 const debug = Debug('sqs-messenger:queue')
 
@@ -19,12 +18,15 @@ class Queue extends EventEmitter {
     isDeadLetterQueue: boolean
     maxReceiveCount: number
     delaySeconds: string
+    messageRetentionPeriod: string
+    pollingWaitSeconds: string
+    loggingEnabled: boolean
   }
   realName: string
   arn: string
   isReady: boolean
   consumers: Consumer[]
-  queueUrl: string
+  locator: string
   deadLetterQueue: Queue
   config: Config
 
@@ -38,6 +40,9 @@ class Queue extends EventEmitter {
       isDeadLetterQueue?: boolean
       maxReceiveCount?: number
       delaySeconds?: number
+      messageRetentionPeriod?: number
+      pollingWaitSeconds?: number
+      loggingEnabled?: boolean
     },
     config: Config,
   ) {
@@ -45,12 +50,15 @@ class Queue extends EventEmitter {
     this.client = client
     this.opts = {
       withDeadLetter: typeof opts.withDeadLetter === 'boolean' ? opts.withDeadLetter : false,
-      visibilityTimeout: (opts.visibilityTimeout || 30).toString(),
-      maximumMessageSize: (opts.maximumMessageSize || 262144).toString(),
       isDeadLetterQueue:
         typeof opts.isDeadLetterQueue === 'boolean' ? opts.isDeadLetterQueue : false,
+      visibilityTimeout: (opts.visibilityTimeout || 30).toString(),
+      maximumMessageSize: (opts.maximumMessageSize || 65536).toString(),
       maxReceiveCount: opts.maxReceiveCount || 5,
       delaySeconds: (opts.delaySeconds || 0).toString(),
+      messageRetentionPeriod: (opts.messageRetentionPeriod || 345600).toString(),
+      pollingWaitSeconds: (opts.pollingWaitSeconds || 0).toString(),
+      loggingEnabled: typeof opts.loggingEnabled === 'boolean' ? opts.loggingEnabled : false,
     }
     this.name = name
     this.realName = config.resourceNamePrefix + name
@@ -62,7 +70,7 @@ class Queue extends EventEmitter {
     this._createQueue().then(
       data => {
         debug('Queue created', data)
-        this.queueUrl = data.QueueUrl!
+        this.locator = data.Locator!
         this.isReady = true
         this.emit('ready')
       },
@@ -70,10 +78,13 @@ class Queue extends EventEmitter {
     )
   }
 
-  async _createQueue(): Promise<{ QueueUrl?: string }> {
+  async _createQueue(): Promise<{ Locator?: string }> {
     debug(`Creating queue ${this.realName}`)
     const opts = this.opts
-    const createParams: SQS.CreateQueueRequest = opts.isDeadLetterQueue
+    const createParams: {
+      QueueName: string
+      Attributes?: { [key: string]: string | number | boolean }
+    } = opts.isDeadLetterQueue
       ? {
           QueueName: this.realName,
         }
@@ -96,6 +107,9 @@ class Queue extends EventEmitter {
               }
             ]
           }`.replace(/\s/g, ''),
+            MessageRetentionPeriod: opts.messageRetentionPeriod,
+            PollingWaitSeconds: opts.pollingWaitSeconds,
+            LoggingEnabled: opts.loggingEnabled,
           },
         }
 
@@ -124,7 +138,7 @@ class Queue extends EventEmitter {
         resolve()
       }
     })
-    return new Promise<{ QueueUrl?: string }>((resolve, reject) => {
+    return new Promise<{ Locator?: string }>((resolve, reject) => {
       this.client
         .createQueue(createParams)
         .then(data => resolve(data))
@@ -132,7 +146,7 @@ class Queue extends EventEmitter {
           if (err.name === 'QueueAlreadyExists') {
             console.warn(`Queue [${this.realName}] already exists`, err.stack)
             // ignore QueueAlreadyExists error
-            resolve({ QueueUrl: this.config.queueUrlPrefix + createParams.QueueName })
+            resolve({ Locator: this.config.queueUrlPrefix + createParams.QueueName })
             return
           }
           reject(err)

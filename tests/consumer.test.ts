@@ -16,7 +16,7 @@ const client = new SqsClient({
 })
 
 test.before(() => {
-  sinon.stub(client, 'createQueue').resolves({ QueueUrl: 'http://test:c' })
+  sinon.stub(client, 'createQueue').resolves({ Locator: 'http://test:c' })
 })
 
 test.cb.serial('should receive message', t => {
@@ -45,20 +45,19 @@ test.cb.serial('should delete message on done', t => {
     .expects('deleteMessage')
     .once()
     .withArgs({
-      QueueUrl: 'http://test:c',
+      Locator: 'http://test:c',
       ReceiptHandle: '1',
     })
     .resolves()
 
   c2.onMessage((message, done) => {
     t.deepEqual(message, { text: 'hahaha' })
+    done()
     setTimeout(() => {
-      done()
       mock.verify()
       t.end()
     }, 200)
   })
-
 })
 
 test.serial('should handle consumer handler timeout', t => {
@@ -98,10 +97,10 @@ test.cb.serial('should delete batch messages on done', t => {
 
   const mock = t.context.sandbox
     .mock(client)
-    .expects('batchDeleteMessage')
+    .expects('deleteMessageBatch')
     .once()
     .withArgs({
-      QueueUrl: 'http://test:c',
+      Locator: 'http://test:c',
       Entries: [
         { Id: '0', ReceiptHandle: '1' },
         { Id: '1', ReceiptHandle: '2' },
@@ -127,5 +126,4 @@ test.cb.serial('should delete batch messages on done', t => {
     },
     { batchHandle: true },
   )
-
 })

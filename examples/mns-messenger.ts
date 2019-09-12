@@ -1,15 +1,16 @@
 import { MnsClient } from '../lib/client'
 import MnsMessenger from '../lib/messenger'
 
-
 const client = new MnsClient({
-  accountId: "",
-  region: "",
-  accessKeyId: "",
-  accessKeySecret: "",
+  accountId: '123456789012',
+  region: 'cn-hangzhou',
+  accessKeyId: 'ACCESS_KEY_ID',
+  accessKeySecret: 'ACCESS_KEY_SECRET',
 })
 
 const mnsMessenger = new MnsMessenger(client, {
+  sqsArnPrefix: 'https://123456789012.mns.cn-hangzhou.aliyuncs.com/',
+  queueUrlPrefix: 'https://123456789012.mns.cn-hangzhou.aliyuncs.com/',
   resourceNamePrefix: 'test_',
   errorHandler: err => {
     console.log('Error handled')

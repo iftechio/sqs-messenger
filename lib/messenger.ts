@@ -6,7 +6,6 @@ import Producer from './producer'
 import Queue from './queue'
 import Topic from './topic'
 import Consumer from './consumer'
-import { SNS, SQS } from 'aws-sdk'
 
 /**
  * Default error handler, print error to console.
@@ -31,7 +30,6 @@ class Messenger {
   constructor(
     client: Client,
     conf: {
-      snsArnPrefix?: string
       sqsArnPrefix?: string
       queueUrlPrefix?: string
       resourceNamePrefix?: string
@@ -104,7 +102,7 @@ class Messenger {
   async sendTopicMessage<T extends object = any>(
     key: string,
     msg: T,
-  ): Promise<SNS.PublishResponse> {
+  ): Promise<{ MessageId?: string; MessageBodyMD5?: string }> {
     const topic = this.topicMap[key]
     if (!topic) {
       throw new Error(`Topic[${key}] not found`)
@@ -115,8 +113,8 @@ class Messenger {
   async sendQueueMessage<T extends object = any>(
     key: string,
     msg: T,
-    opts?: { DelaySeconds?: number },
-  ): Promise<SQS.SendMessageResult> {
+    opts?: { DelaySeconds?: number; Priority?: number },
+  ): Promise<{ MessageId?: string; MD5OfMessageBody?: string }> {
     const queue = this.queueMap[key]
     if (!queue) {
       throw new Error(`Queue[${key}] not found`)

@@ -11,7 +11,7 @@ class Topic extends EventEmitter {
   isReady: boolean
   name: string
   realName: string
-  arn: string
+  Locator: string
   client: Client
 
   constructor(client: Client, name: string, config: Config) {
@@ -23,10 +23,10 @@ class Topic extends EventEmitter {
 
     debug(`Create topic ${this.name}`)
     this.client
-      .createTopic({ Name: this.realName })
+      .createTopic({ TopicName: this.realName })
       .then(data => {
         debug('topic created %j', data)
-        this.arn = data.TopicArn || ''
+        this.Locator = data.Locator || ''
         this.isReady = true
         this.emit('ready')
       })
@@ -43,11 +43,11 @@ class Topic extends EventEmitter {
       })
     }
 
-    const data = await new Promise<{ SubscriptionArn?: string }>((resolve, reject) => {
+    const data = await new Promise<{ SubscribeLocator?: string }>((resolve, reject) => {
       this.client
         .subscribe({
+          TopicLocator: this.Locator,
           Protocol: 'sqs',
-          TopicArn: this.arn,
           Endpoint: queue.arn,
         })
         .then(data2 => {
@@ -67,7 +67,7 @@ class Topic extends EventEmitter {
     })
 
     return this.client.setSubscriptionAttributes({
-      SubscriptionArn: data.SubscriptionArn!,
+      SubscribeLocator: data.SubscribeLocator!,
       AttributeName: 'RawMessageDelivery',
       AttributeValue: 'true',
     })

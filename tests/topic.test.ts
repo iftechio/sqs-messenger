@@ -27,8 +27,8 @@ test.cb.serial('should create topic', t => {
     .mock(client)
     .expects('createTopic')
     .once()
-    .withArgs({ Name: 'test_t1' })
-    .resolves({ TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
+    .withArgs({ TopicName: 'test_t1' })
+    .resolves({ Locator: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
 
   const t1 = new Topic(client, 't1', config)
   t1.on('ready', () => {
@@ -40,19 +40,15 @@ test.cb.serial('should create topic', t => {
 test.serial('should bind queue', t => {
   t.context.sandbox
     .stub(client, 'createTopic')
-    .resolves({ TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
-  t.context.sandbox
-    .stub(client, 'createQueue')
-    .resolves({ QueueUrl: 'http://test/tq1' })
+    .resolves({ Locator: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
+  t.context.sandbox.stub(client, 'createQueue').resolves({ Locator: 'http://test/tq1' })
 
   const subStub = t.context.sandbox
     .mock(client)
     .expects('subscribe')
     .once()
-    .resolves({ SubscriptionArn: 'arn:subscription' })
-  const setAttrStub = t.context.sandbox
-    .stub(client, 'setSubscriptionAttributes')
-    .resolves({})
+    .resolves({ SubscribeLocator: 'arn:subscription' })
+  const setAttrStub = t.context.sandbox.stub(client, 'setSubscriptionAttributes').resolves({})
 
   const tq = new Queue(client, 'tq', {}, config)
   const t2 = new Topic(client, 't2', config)
@@ -63,11 +59,11 @@ test.serial('should bind queue', t => {
     t.truthy(setAttrStub.calledOnce)
     t.deepEqual(subStub.firstCall.args[0], {
       Protocol: 'sqs',
-      TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1',
+      TopicLocator: 'arn:aws-cn:sns:cn-north-1:abc:test_t1',
       Endpoint: 'arn:sqs:test:test_tq',
     })
     t.deepEqual(setAttrStub.firstCall.args[0], {
-      SubscriptionArn: 'arn:subscription',
+      SubscribeLocator: 'arn:subscription',
       AttributeName: 'RawMessageDelivery',
       AttributeValue: 'true',
     })

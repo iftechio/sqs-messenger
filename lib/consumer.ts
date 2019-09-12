@@ -3,7 +3,6 @@ import * as Bluebird from 'bluebird'
 import { EventEmitter } from 'events'
 
 import Queue from './queue'
-import { SQS } from 'aws-sdk'
 
 const debug = Debug('sqs-messenger:consumer')
 
@@ -48,7 +47,7 @@ class Consumer<T = any> extends EventEmitter {
       debug('Polling for messages')
       this.queue.client
         .receiveMessage({
-          QueueUrl: this.queue.queueUrl,
+          Locator: this.queue.locator,
           MaxNumberOfMessages: this.batchSize,
           WaitTimeSeconds: 20, // max time long polling
           VisibilityTimeout: this.visibilityTimeout,
@@ -65,7 +64,7 @@ class Consumer<T = any> extends EventEmitter {
               .catch((err2: Error) => {
                 err2.message = `Consumer[${this.queue.name}] processingMessages error: ${
                   err2.message
-                  }`
+                }`
                 this.emit('error', err2)
                 this._pull()
               })
@@ -74,8 +73,12 @@ class Consumer<T = any> extends EventEmitter {
           }
         })
         .catch(err => {
-          err.message = `Error receiving sqs message: ${err.message}`
-          this.emit('error', err)
+          if (err.name === 'MNSMessageNotExistErr') {
+            this._pull()
+          } else {
+            err.message = `Error receiving sqs message: ${err.message}`
+            this.emit('error', err)
+          }
         })
     }
   }
@@ -83,31 +86,38 @@ class Consumer<T = any> extends EventEmitter {
   /**
    * Call consumer handler, this function never reject, to make the polling loop running forever.
    */
-  async _processMessage(messages: SQS.Message[]): Promise<void> {
+  async _processMessage(
+    messages: {
+      MessageId?: string
+      ReceiptHandle?: string
+      MD5OfBody?: string
+      Body?: string
+    }[],
+  ): Promise<void> {
     debug('Processing message, %o', messages)
     const decodedMessages = messages.map(message => message.Body && JSON.parse(message.Body))
 
     return (this.batchHandle
       ? new Bluebird<void>((resolve, reject) => {
-        this.handler(decodedMessages, err => {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(this._deleteMessageBatch(messages))
-          }
-        })
-      })
-      : Bluebird.map(decodedMessages, (decodedMessage, i) => {
-        return new Promise((resolve, reject) => {
-          this.handler(decodedMessage, err => {
+          this.handler(decodedMessages, err => {
             if (err) {
               reject(err)
             } else {
-              resolve(this._deleteMessage(messages[i]))
+              resolve(this._deleteMessageBatch(messages))
             }
           })
         })
-      })
+      : Bluebird.map(decodedMessages, (decodedMessage, i) => {
+          return new Promise((resolve, reject) => {
+            this.handler(decodedMessage, err => {
+              if (err) {
+                reject(err)
+              } else {
+                resolve(this._deleteMessage(messages[i]))
+              }
+            })
+          })
+        })
     )
       .timeout(this.visibilityTimeout * 1000)
       .catch((err: Error) => {
@@ -125,9 +135,14 @@ class Consumer<T = any> extends EventEmitter {
   /**
    * Delete message from queue if it's handled correctly.
    */
-  async _deleteMessage(message: SQS.Message): Promise<void> {
+  async _deleteMessage(message: {
+    MessageId?: string
+    ReceiptHandle?: string
+    MD5OfBody?: string
+    Body?: string
+  }): Promise<void> {
     const deleteParams = {
-      QueueUrl: this.queue.queueUrl,
+      Locator: this.queue.locator,
       ReceiptHandle: message.ReceiptHandle!,
     }
 
@@ -135,9 +150,16 @@ class Consumer<T = any> extends EventEmitter {
     return this.queue.client.deleteMessage(deleteParams)
   }
 
-  async _deleteMessageBatch(messages: SQS.Message[]): Promise<void> {
+  async _deleteMessageBatch(
+    messages: {
+      MessageId?: string
+      ReceiptHandle?: string
+      MD5OfBody?: string
+      Body?: string
+    }[],
+  ): Promise<void> {
     const params = {
-      QueueUrl: this.queue.queueUrl,
+      Locator: this.queue.locator,
       Entries: messages.map((message, i) => ({
         Id: i.toString(),
         ReceiptHandle: message.ReceiptHandle!,

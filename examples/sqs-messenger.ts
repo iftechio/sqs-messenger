@@ -13,7 +13,6 @@ const client = new SqsClient({
 })
 
 const sqsMessenger = new SqsMessenger(client, {
-  snsArnPrefix: 'arn:aws-cn:sns:cn-north-1:123456789012:',
   sqsArnPrefix: 'arn:aws-cn:sqs:cn-north-1:123456789012:',
   queueUrlPrefix: 'http://sqs.cn-north-1.amazonaws.com.cn/123456789012/',
   resourceNamePrefix: 'test_',

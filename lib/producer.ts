@@ -3,7 +3,6 @@ import * as Bluebird from 'bluebird'
 import { Client } from './client'
 import Queue from './queue'
 import Topic from './topic'
-import { SQS } from 'aws-sdk'
 
 class Producer {
   client: Client
@@ -34,7 +33,7 @@ class Producer {
       .timeout(2000, `topic ${topic.name} is not ready within 2000ms`)
       .then(() => {
         return this.client.publish({
-          TopicArn: topic.arn,
+          Locator: topic.Locator,
           Message: encodedMessage,
         })
       })
@@ -46,8 +45,11 @@ class Producer {
   async sendQueue<T extends object = any>(
     queue: Queue,
     message: T,
-    opts?: { DelaySeconds?: number },
-  ): Promise<SQS.SendMessageResult> {
+    opts?: { DelaySeconds?: number; Priority?: number },
+  ): Promise<{
+    MessageId?: string
+    MD5OfMessageBody?: string
+  }> {
     const metaAttachedMessage = { _meta: {}, ...(message as object) }
     const encodedMessage = JSON.stringify(metaAttachedMessage)
     return new Bluebird(resolve => {
@@ -61,7 +63,7 @@ class Producer {
       .then(() => {
         return this.client.sendMessage({
           ...opts,
-          QueueUrl: queue.queueUrl,
+          Locator: queue.locator,
           MessageBody: encodedMessage,
         })
       })

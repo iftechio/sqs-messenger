@@ -31,7 +31,7 @@ test('should send to topic', t => {
     .sendTopic(
       {
         isReady: true,
-        arn: 'arn:sns:test',
+        Locator: 'arn:sns:test',
         name: 'testTopic',
       } as Topic,
       message,
@@ -39,7 +39,7 @@ test('should send to topic', t => {
     .then(() => {
       mock.verify()
       t.deepEqual(mock.firstCall.args[0], {
-        TopicArn: 'arn:sns:test',
+        Locator: 'arn:sns:test',
         Message: JSON.stringify(metaAttachedMessage),
       })
     })
@@ -59,7 +59,7 @@ test('should send to queue', t => {
       {
         isReady: true,
         arn: 'arn:sqs:test',
-        queueUrl: 'http://sqs.test.com/q1',
+        locator: 'http://sqs.test.com/q1',
         name: 'testQueue',
       } as Queue,
       message,
@@ -67,7 +67,7 @@ test('should send to queue', t => {
     .then(() => {
       mock.verify()
       t.deepEqual(mock.firstCall.args[0], {
-        QueueUrl: 'http://sqs.test.com/q1',
+        Locator: 'http://sqs.test.com/q1',
         MessageBody: JSON.stringify(metaAttachedMessage),
       })
     })

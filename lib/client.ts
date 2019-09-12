@@ -1,16 +1,70 @@
 import { SQS, SNS } from 'aws-sdk'
-import MNS, { Types } from '@ruguoapp/mns-node-sdk'
-export interface Client {
-  createQueue(params): Promise<any>
-  sendMessage(params): Promise<any>
-  receiveMessage(params): Promise<any>
-  deleteMessage(params): Promise<any>
-  deleteMessageBatch(params): Promise<any>
+import * as MNS from '@ruguoapp/mns-node-sdk'
 
-  createTopic(params): Promise<any>
-  subscribe(params): Promise<any>
-  setSubscriptionAttributes(params): Promise<any>
-  publish(params): Promise<any>
+export interface Client {
+  createQueue(params: {
+    QueueName: string
+    Attributes?: { [key: string]: string | number | boolean }
+  }): Promise<{ Locator?: string }>
+
+  sendMessage(params: {
+    Locator: string
+    MessageBody: string
+    DelaySeconds?: number
+    Priority?: number
+  }): Promise<{
+    MessageId?: string
+    MD5OfMessageBody?: string
+  }>
+
+  receiveMessage(params: {
+    Locator: string
+    MaxNumberOfMessages: number
+    WaitTimeSeconds: number
+    VisibilityTimeout: number
+  }): Promise<{
+    Messages?: {
+      MessageId?: string
+      ReceiptHandle?: string
+      MD5OfBody?: string
+      Body?: string
+    }[]
+  }>
+
+  deleteMessage(params: { Locator: string; ReceiptHandle: string }): Promise<void>
+
+  deleteMessageBatch(params: {
+    Locator: string
+    Entries: {
+      Id: string
+      ReceiptHandle: string
+    }[]
+  }): Promise<void>
+
+  createTopic(params: {
+    TopicName: string
+    Attributes?: {
+      MaximumMessageSize?: number
+      LoggingEnabled?: boolean
+    }
+  }): Promise<{ Locator?: string }>
+
+  subscribe(params: {
+    TopicLocator: string
+    Protocol?: string
+    Endpoint: string
+  }): Promise<{ SubscribeLocator?: string }>
+
+  setSubscriptionAttributes(params: {
+    SubscribeLocator: string
+    AttributeName?: string
+    AttributeValue: string
+  }): Promise<void>
+
+  publish(params: {
+    Locator: string
+    Message: string
+  }): Promise<{ MessageId?: string; MD5OfMessageBody?: string }>
 }
 
 export class SqsClient implements Client {
@@ -29,72 +83,128 @@ export class SqsClient implements Client {
   }
 
   async createQueue(params: SQS.CreateQueueRequest) {
-    return new Promise<SQS.CreateQueueResult>((resolve, reject) => {
+    return new Promise<{ Locator?: string }>((resolve, reject) => {
       this.sqs.createQueue(params, (err, data) => {
-        err ? reject(err) : resolve(data)
+        err ? reject(err) : resolve({ Locator: data.QueueUrl })
       })
     })
   }
 
-  async sendMessage(params: SQS.SendMessageRequest) {
+  async sendMessage(params: {
+    Locator: string
+    MessageBody: string
+    DelaySeconds?: number
+    Priority?: number
+  }) {
+    const sendMessageParams: SQS.SendMessageRequest = {
+      QueueUrl: params.Locator,
+      MessageBody: params.MessageBody,
+      DelaySeconds: params.DelaySeconds,
+    }
     return new Promise<SQS.SendMessageResult>((resolve, reject) => {
-      this.sqs.sendMessage(params, (err, data) => {
+      this.sqs.sendMessage(sendMessageParams, (err, data) => {
         err ? reject(err) : resolve(data)
       })
     })
   }
 
-  async receiveMessage(params: SQS.ReceiveMessageRequest) {
+  async receiveMessage(params: {
+    Locator: string
+    MaxNumberOfMessages: number
+    WaitTimeSeconds: number
+    VisibilityTimeout: number
+  }) {
+    const receiveMessageParams: SQS.ReceiveMessageRequest = {
+      QueueUrl: params.Locator,
+      MaxNumberOfMessages: params.MaxNumberOfMessages,
+      WaitTimeSeconds: params.WaitTimeSeconds,
+      VisibilityTimeout: params.VisibilityTimeout,
+    }
     return new Promise<SQS.ReceiveMessageResult>((resolve, reject) => {
-      this.sqs.receiveMessage(params, (err, data) => {
+      this.sqs.receiveMessage(receiveMessageParams, (err, data) => {
         err ? reject(err) : resolve(data)
       })
     })
   }
 
-  async deleteMessage(params: SQS.DeleteMessageRequest) {
-    return new Promise<{}>((resolve, reject) => {
-      this.sqs.deleteMessage(params, (err, data) => {
-        err ? reject(err) : resolve(data)
+  async deleteMessage(params: { Locator: string; ReceiptHandle: string }) {
+    const deleteMessageParams: SQS.DeleteMessageRequest = {
+      QueueUrl: params.Locator,
+      ReceiptHandle: params.ReceiptHandle,
+    }
+    return new Promise<void>((resolve, reject) => {
+      this.sqs.deleteMessage(deleteMessageParams, err => {
+        err ? reject(err) : resolve()
       })
     })
   }
 
-  async deleteMessageBatch(params: SQS.DeleteMessageBatchRequest) {
-    return new Promise<SQS.DeleteMessageBatchResult>((resolve, reject) => {
-      this.sqs.deleteMessageBatch(params, (err, data) => {
-        err ? reject(err) : resolve(data)
+  async deleteMessageBatch(params: {
+    Locator: string
+    Entries: {
+      Id: string
+      ReceiptHandle: string
+    }[]
+  }) {
+    const deleteMessageBatchParams: SQS.DeleteMessageBatchRequest = {
+      QueueUrl: params.Locator,
+      Entries: params.Entries,
+    }
+    return new Promise<void>((resolve, reject) => {
+      this.sqs.deleteMessageBatch(deleteMessageBatchParams, err => {
+        err ? reject(err) : resolve()
       })
     })
   }
 
-  async createTopic(params: SNS.CreateTopicInput) {
-    return new Promise<SNS.CreateTopicResponse>((resolve, reject) => {
-      this.sns.createTopic(params, (err, data) => {
-        err ? reject(err) : resolve(data)
+  async createTopic(params: { TopicName: string }) {
+    const createTopicParams: SNS.CreateTopicInput = {
+      Name: params.TopicName,
+    }
+    return new Promise<{ Locator?: string }>((resolve, reject) => {
+      this.sns.createTopic(createTopicParams, (err, data) => {
+        err ? reject(err) : resolve({ Locator: data.TopicArn })
       })
     })
   }
 
-  async subscribe(params: SNS.SubscribeInput) {
-    return new Promise<SNS.SubscribeResponse>((resolve, reject) => {
-      this.sns.subscribe(params, (err, data) => {
-        err ? reject(err) : resolve(data)
+  async subscribe(params: { TopicLocator: string; Protocol: string; Endpoint: string }) {
+    const subscribeParams: SNS.SubscribeInput = {
+      TopicArn: params.TopicLocator,
+      Protocol: params.Protocol,
+      Endpoint: params.Endpoint,
+    }
+    return new Promise<{ SubscribeLocator?: string }>((resolve, reject) => {
+      this.sns.subscribe(subscribeParams, (err, data) => {
+        err ? reject(err) : resolve({ SubscribeLocator: data.SubscriptionArn })
       })
     })
   }
 
-  async setSubscriptionAttributes(params: SNS.SetSubscriptionAttributesInput) {
-    return new Promise<{}>((resolve, reject) => {
-      this.sns.setSubscriptionAttributes(params, (err, data) => {
-        err ? reject(err) : resolve(data)
+  async setSubscriptionAttributes(params: {
+    SubscribeLocator: string
+    AttributeName: string
+    AttributeValue: string
+  }) {
+    const setSubscriptionAttributesParams: SNS.SetSubscriptionAttributesInput = {
+      SubscriptionArn: params.SubscribeLocator,
+      AttributeName: params.AttributeName,
+      AttributeValue: params.AttributeValue,
+    }
+    return new Promise<void>((resolve, reject) => {
+      this.sns.setSubscriptionAttributes(setSubscriptionAttributesParams, err => {
+        err ? reject(err) : resolve()
       })
     })
   }
 
-  async publish(params: SNS.PublishInput) {
+  async publish(params: { Locator: string; Message: string }) {
+    const publishParams: SNS.PublishInput = {
+      TopicArn: params.Locator,
+      Message: params.Message,
+    }
     return new Promise<SNS.PublishResponse>((resolve, reject) => {
-      this.sns.publish(params, (err, data) => {
+      this.sns.publish(publishParams, (err, data) => {
         err ? reject(err) : resolve(data)
       })
     })
@@ -102,53 +212,120 @@ export class SqsClient implements Client {
 }
 
 export class MnsClient implements Client {
-  mns: MNS
+  mns: MNS.Client
 
   constructor(options: {
-    accountId: string,
-    region: string,
-    accessKeyId: string,
-    accessKeySecret: string,
-    secure?: boolean,
-    internal?: boolean,
-    vpc?: boolean,
+    accountId: string
+    region: string
+    accessKeyId: string
+    accessKeySecret: string
+    secure?: boolean
+    internal?: boolean
+    vpc?: boolean
   }) {
-    this.mns = new MNS(options)
+    this.mns = new MNS.Client(options)
   }
 
-  async createQueue(params: Types.CreateQueueRequest) {
-    return this.mns.createQueue(params)
+  async createQueue(params: MNS.Types.CreateQueueRequest) {
+    await this.mns.createQueue(params)
+    return { Locator: params.QueueName }
   }
 
-  async sendMessage(params: Types.SendMessageRequest) {
-    return this.mns.sendMessage(params)
+  async sendMessage(params: {
+    Locator: string
+    MessageBody: string
+    DelaySeconds?: number
+    Priority?: number
+  }) {
+    const sendMessageParams: MNS.Types.SendMessageRequest = {
+      QueueName: params.Locator,
+      Payloads: {
+        MessageBody: params.MessageBody,
+        DelaySeconds: params.DelaySeconds,
+        Priority: params.Priority,
+      },
+    }
+    const data = await this.mns.sendMessage(sendMessageParams)
+    return {
+      MessageId: data.MessageId,
+      MD5OfMessageBody: data.MessageBodyMD5,
+    }
   }
 
-  async receiveMessage(params: Types.ReceiveMessageRequest) {
-    return this.mns.receiveMessage(params)
+  async receiveMessage(params: {
+    Locator: string
+    MaxNumberOfMessages: number
+    WaitTimeSeconds: number
+    VisibilityTimeout: number
+  }) {
+    const receiveMessageParams: MNS.Types.BatchReceiveMessageRequest = {
+      QueueName: params.Locator,
+      NumOfMessages: params.MaxNumberOfMessages,
+      WaitSeconds: params.WaitTimeSeconds,
+    }
+    const data = await this.mns.batchReceiveMessage(receiveMessageParams)
+    return {
+      Messages: data.map(message => ({
+        MessageId: message.MessageId,
+        ReceiptHandle: message.ReceiptHandle,
+        MD5OfBody: message.MessageBodyMD5,
+        Body: message.MessageBody,
+      })),
+    }
   }
 
-  async deleteMessage(params: Types.DeleteMessageRequest) {
-    return this.mns.deleteMessage(params)
+  async deleteMessage(params: { Locator: string; ReceiptHandle: string }) {
+    const deleteMessageParams: MNS.Types.DeleteMessageRequest = {
+      QueueName: params.Locator,
+      ReceiptHandle: params.ReceiptHandle,
+    }
+    return this.mns.deleteMessage(deleteMessageParams)
   }
 
-  async deleteMessageBatch(params: Types.BatchDeleteMessageRequest) {
-    return this.mns.batchDeleteMessage(params)
+  async deleteMessageBatch(params: {
+    Locator: string
+    Entries: {
+      Id: string
+      ReceiptHandle: string
+    }[]
+  }) {
+    const deleteMessageBatchParams: MNS.Types.BatchDeleteMessageRequest = {
+      QueueName: params.Locator,
+      ReceiptHandles: params.Entries.map(message => message.ReceiptHandle),
+    }
+    await this.mns.batchDeleteMessage(deleteMessageBatchParams)
+    return
   }
 
-  async createTopic(params: Types.CreateTopicRequest) {
-    return this.mns.createTopic(params)
+  async createTopic(params: MNS.Types.CreateTopicRequest) {
+    await this.mns.createTopic(params)
+    return { Locator: params.TopicName }
   }
 
-  async subscribe(params: Types.SubscribeRequest) {
-    return this.mns.subscribe(params)
+  async subscribe(params: { TopicLocator: string; Endpoint: string }) {
+    const subscribeParams: MNS.Types.SubscribeRequest = {
+      TopicName: params.TopicLocator,
+      SubscriptionName: `${params.TopicLocator}-${params.Endpoint}`,
+      Attributes: {
+        Endpoint: params.Endpoint,
+      },
+    }
+    await this.mns.subscribe(subscribeParams)
+    return { SubscribeLocator: `${params.TopicLocator}-${params.Endpoint}` }
   }
 
-  async setSubscriptionAttributes(params: Types.SetSubscriptionAttributesRequest) {
-    return this.mns.setSubscriptionAttributes(params)
+  async setSubscriptionAttributes() {
+    return
   }
 
-  async publish(params: Types.PublishMessageRequest) {
-    return this.mns.publishMessage(params)
+  async publish(params: { Locator: string; Message: string }) {
+    const publishParams: MNS.Types.PublishMessageRequest = {
+      TopicName: params.Locator,
+      Payloads: {
+        MessageBody: params.Message,
+      },
+    }
+    const data = await this.mns.publishMessage(publishParams)
+    return { MessageId: data.MessageId, MD5OfMessageBody: data.MessageBodyMD5 }
   }
 }

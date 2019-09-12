@@ -22,13 +22,16 @@ const client = new SqsClient({
 
 test.beforeEach(t => {
   t.context.sandbox.stub(client, 'createQueue').resolves({
-    QueueUrl: 'http://test:c',
+    Locator: 'http://test:c',
   })
-  // tslint:disable-next-line:no-unused
-  t.context.sandbox.stub(client, 'deleteMessage').callsFake((params, callback) => callback()).resolves()
+  t.context.sandbox
+    .stub(client, 'deleteMessage')
+    // tslint:disable-next-line:no-unused
+    .callsFake((params, callback) => callback())
+    .resolves()
   t.context.sandbox
     .stub(client, 'createTopic')
-    .resolves({ TopicArn: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
+    .resolves({ Locator: 'arn:aws-cn:sns:cn-north-1:abc:test_t1' })
 })
 
 test.serial('create queue', t => {
@@ -104,7 +107,10 @@ test.cb.serial('register two consumers', t => {
 })
 
 test.cb.serial('bind topic', t => {
-  const topicSubscribeStub = t.context.sandbox.stub(Topic.prototype, 'subscribe').callsFake().resolves()
+  const topicSubscribeStub = t.context.sandbox
+    .stub(Topic.prototype, 'subscribe')
+    .callsFake()
+    .resolves()
   const messenger = new Messenger(client, {
     sqsArnPrefix: 'arn:sqs:test:',
     resourceNamePrefix: 'test_',
