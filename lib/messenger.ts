@@ -1,11 +1,12 @@
 import * as Bluebird from 'bluebird'
 
-import { QueueClient, TopicClient, SendMessageResult, PublishResponse } from './client'
+import { Client } from './client'
 import Config from './config'
 import Producer from './producer'
 import Queue from './queue'
 import Topic from './topic'
 import Consumer from './consumer'
+import { SNS, SQS } from 'aws-sdk'
 
 /**
  * Default error handler, print error to console.
@@ -20,8 +21,7 @@ function loggingErrorHandler(...args) {
 }
 
 class Messenger {
-  queueClient: QueueClient
-  topicClient: TopicClient
+  client: Client
   queueMap: { [name: string]: Queue } = {}
   topicMap: { [name: string]: Topic } = {}
   config: Config
@@ -29,7 +29,7 @@ class Messenger {
   errorHandler: (...args: any[]) => void
 
   constructor(
-    { queueClient, topicClient }: { queueClient: QueueClient; topicClient: TopicClient },
+    client: Client,
     conf: {
       snsArnPrefix?: string
       sqsArnPrefix?: string
@@ -38,10 +38,9 @@ class Messenger {
       errorHandler?(...args: any[]): void
     },
   ) {
-    this.queueClient = queueClient
-    this.topicClient = topicClient
+    this.client = client
     this.config = new Config(conf)
-    this.producer = new Producer({ queueClient, topicClient })
+    this.producer = new Producer(client)
     this.errorHandler = conf.errorHandler || loggingErrorHandler
   }
 
@@ -102,7 +101,10 @@ class Messenger {
     })
   }
 
-  async sendTopicMessage<T extends object = any>(key: string, msg: T): Promise<PublishResponse> {
+  async sendTopicMessage<T extends object = any>(
+    key: string,
+    msg: T,
+  ): Promise<SNS.PublishResponse> {
     const topic = this.topicMap[key]
     if (!topic) {
       throw new Error(`Topic[${key}] not found`)
@@ -114,7 +116,7 @@ class Messenger {
     key: string,
     msg: T,
     opts?: { DelaySeconds?: number },
-  ): Promise<SendMessageResult> {
+  ): Promise<SQS.SendMessageResult> {
     const queue = this.queueMap[key]
     if (!queue) {
       throw new Error(`Queue[${key}] not found`)
@@ -126,7 +128,7 @@ class Messenger {
    * Create a topic with specific name, will declare the SNS topic if not exists
    */
   createTopic(name: string): Topic {
-    const topic = new Topic(this.topicClient, name, this.config)
+    const topic = new Topic(this.client, name, this.config)
     topic.on('error', this.errorHandler)
 
     this.topicMap[name] = topic
@@ -148,7 +150,7 @@ class Messenger {
       delaySeconds?: number
     } = {},
   ): Queue {
-    const queue = new Queue(this.queueClient, name, opts, this.config)
+    const queue = new Queue(this.client, name, opts, this.config)
     queue.on('error', this.errorHandler)
 
     if (opts.bindTopics || opts.bindTopic) {

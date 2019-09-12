@@ -1,28 +1,29 @@
 import test from './_init'
-import { SQS, SNS } from 'aws-sdk'
 
 import Producer from '../lib/producer'
 import Topic from '../lib/topic'
 import Queue from '../lib/queue'
+import { SqsClient } from '../lib/client'
 
-const sqs = new SQS({
-  region: 'cn-north-1',
-  apiVersion: '2012-11-05',
+const client = new SqsClient({
+  sqsOptions: {
+    region: 'cn-north-1',
+    apiVersion: '2012-11-05',
+  },
+  snsOptions: {
+    region: 'cn-north-1',
+    apiVersion: '2010-03-31',
+  },
 })
 
-const sns = new SNS({
-  region: 'cn-north-1',
-  apiVersion: '2010-03-31',
-})
-
-const producer = new Producer({ queueClient: sqs, topicClient: sns })
+const producer = new Producer(client)
 
 test('should send to topic', t => {
   const mock = t.context.sandbox
-    .mock(sns)
+    .mock(client)
     .expects('publish')
     .once()
-    .callsArgWithAsync(1, null, {})
+    .resolves({})
 
   const message = { text: 'abc' }
   const metaAttachedMessage = { _meta: { topicName: 'testTopic' }, ...message }
@@ -46,10 +47,10 @@ test('should send to topic', t => {
 
 test('should send to queue', t => {
   const mock = t.context.sandbox
-    .mock(sqs)
+    .mock(client)
     .expects('sendMessage')
     .once()
-    .callsArgWithAsync(1, null, {})
+    .resolves({})
 
   const message = { text: 'abc' }
   const metaAttachedMessage = { _meta: {}, ...message }

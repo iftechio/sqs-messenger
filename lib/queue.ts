@@ -2,14 +2,15 @@ import * as Debug from 'debug'
 import * as Bluebird from 'bluebird'
 import { EventEmitter } from 'events'
 
-import { QueueClient, CreateQueueRequest, CreateQueueResult } from './client'
+import { Client } from './client'
 import Consumer from './consumer'
 import Config from './config'
+import { SQS } from 'aws-sdk'
 
 const debug = Debug('sqs-messenger:queue')
 
 class Queue extends EventEmitter {
-  client: QueueClient
+  client: Client
   name: string
   opts: {
     withDeadLetter: boolean
@@ -28,7 +29,7 @@ class Queue extends EventEmitter {
   config: Config
 
   constructor(
-    queueClient: QueueClient,
+    client: Client,
     name: string,
     opts: {
       withDeadLetter?: boolean
@@ -41,7 +42,7 @@ class Queue extends EventEmitter {
     config: Config,
   ) {
     super()
-    this.client = queueClient
+    this.client = client
     this.opts = {
       withDeadLetter: typeof opts.withDeadLetter === 'boolean' ? opts.withDeadLetter : false,
       visibilityTimeout: (opts.visibilityTimeout || 30).toString(),
@@ -72,7 +73,7 @@ class Queue extends EventEmitter {
   async _createQueue(): Promise<{ QueueUrl?: string }> {
     debug(`Creating queue ${this.realName}`)
     const opts = this.opts
-    const createParams: CreateQueueRequest = opts.isDeadLetterQueue
+    const createParams: SQS.CreateQueueRequest = opts.isDeadLetterQueue
       ? {
           QueueName: this.realName,
         }
@@ -123,9 +124,11 @@ class Queue extends EventEmitter {
         resolve()
       }
     })
-    return new Promise<CreateQueueResult>((resolve, reject) => {
-      this.client.createQueue(createParams, (err, data) => {
-        if (err) {
+    return new Promise<{ QueueUrl?: string }>((resolve, reject) => {
+      this.client
+        .createQueue(createParams)
+        .then(data => resolve(data))
+        .catch(err => {
           if (err.name === 'QueueAlreadyExists') {
             console.warn(`Queue [${this.realName}] already exists`, err.stack)
             // ignore QueueAlreadyExists error
@@ -133,10 +136,7 @@ class Queue extends EventEmitter {
             return
           }
           reject(err)
-        } else {
-          resolve(data)
-        }
-      })
+        })
     })
   }
 

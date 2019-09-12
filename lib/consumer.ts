@@ -2,8 +2,8 @@ import * as Debug from 'debug'
 import * as Bluebird from 'bluebird'
 import { EventEmitter } from 'events'
 
-import { ReceiveMessageResult, Message } from './client'
 import Queue from './queue'
+import { SQS } from 'aws-sdk'
 
 const debug = Debug('sqs-messenger:consumer')
 
@@ -46,74 +46,68 @@ class Consumer<T = any> extends EventEmitter {
   _pull(): void {
     if (this.running) {
       debug('Polling for messages')
-      this.queue.client.receiveMessage(
-        {
+      this.queue.client
+        .receiveMessage({
           QueueUrl: this.queue.queueUrl,
           MaxNumberOfMessages: this.batchSize,
           WaitTimeSeconds: 20, // max time long polling
           VisibilityTimeout: this.visibilityTimeout,
-        },
-        (err, data) => {
-          this._handleSqsResponse(err, data)
-        },
-      )
-    }
-  }
-
-  /**
-   * Handler response which contains a batch of messages, dispatch then to consumer handler.
-   */
-  _handleSqsResponse(err: Error, response: ReceiveMessageResult): void {
-    if (err) {
-      err.message = `Error receiving sqs message: ${err.message}`
-      this.emit('error', err)
-    }
-    debug('Response received', response)
-    if (response && response.Messages && response.Messages.length) {
-      debug('Handle messages', response.Messages.length)
-      this.processingMessagesPromise = this._processMessage(response.Messages)
-      this.processingMessagesPromise
-        .then(() => {
-          this._pull()
         })
-        .catch((err2: Error) => {
-          err2.message = `Consumer[${this.queue.name}] processingMessages error: ${err2.message}`
-          this.emit('error', err2)
-          this._pull()
+        .then(data => {
+          debug('Response received', data)
+          if (data && data.Messages && data.Messages.length) {
+            debug('Handle messages', data.Messages.length)
+            this.processingMessagesPromise = this._processMessage(data.Messages)
+            this.processingMessagesPromise
+              .then(() => {
+                this._pull()
+              })
+              .catch((err2: Error) => {
+                err2.message = `Consumer[${this.queue.name}] processingMessages error: ${
+                  err2.message
+                  }`
+                this.emit('error', err2)
+                this._pull()
+              })
+          } else {
+            this._pull()
+          }
         })
-    } else {
-      this._pull()
+        .catch(err => {
+          err.message = `Error receiving sqs message: ${err.message}`
+          this.emit('error', err)
+        })
     }
   }
 
   /**
    * Call consumer handler, this function never reject, to make the polling loop running forever.
    */
-  async _processMessage(messages: Message[]): Promise<void> {
+  async _processMessage(messages: SQS.Message[]): Promise<void> {
     debug('Processing message, %o', messages)
     const decodedMessages = messages.map(message => message.Body && JSON.parse(message.Body))
 
     return (this.batchHandle
       ? new Bluebird<void>((resolve, reject) => {
-          this.handler(decodedMessages, err => {
+        this.handler(decodedMessages, err => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(this._deleteMessageBatch(messages))
+          }
+        })
+      })
+      : Bluebird.map(decodedMessages, (decodedMessage, i) => {
+        return new Promise((resolve, reject) => {
+          this.handler(decodedMessage, err => {
             if (err) {
               reject(err)
             } else {
-              resolve(this._deleteMessageBatch(messages))
+              resolve(this._deleteMessage(messages[i]))
             }
           })
         })
-      : Bluebird.map(decodedMessages, (decodedMessage, i) => {
-          return new Promise((resolve, reject) => {
-            this.handler(decodedMessage, err => {
-              if (err) {
-                reject(err)
-              } else {
-                resolve(this._deleteMessage(messages[i]))
-              }
-            })
-          })
-        })
+      })
     )
       .timeout(this.visibilityTimeout * 1000)
       .catch((err: Error) => {
@@ -131,21 +125,17 @@ class Consumer<T = any> extends EventEmitter {
   /**
    * Delete message from queue if it's handled correctly.
    */
-  async _deleteMessage(message: Message): Promise<void> {
+  async _deleteMessage(message: SQS.Message): Promise<void> {
     const deleteParams = {
       QueueUrl: this.queue.queueUrl,
       ReceiptHandle: message.ReceiptHandle!,
     }
 
     debug('Deleting message ', message.MessageId)
-    return new Promise<void>((resolve, reject) => {
-      this.queue.client.deleteMessage(deleteParams, err => {
-        err ? reject(err) : resolve()
-      })
-    })
+    return this.queue.client.deleteMessage(deleteParams)
   }
 
-  async _deleteMessageBatch(messages: Message[]): Promise<void> {
+  async _deleteMessageBatch(messages: SQS.Message[]): Promise<void> {
     const params = {
       QueueUrl: this.queue.queueUrl,
       Entries: messages.map((message, i) => ({
@@ -154,11 +144,7 @@ class Consumer<T = any> extends EventEmitter {
       })),
     }
 
-    return new Promise<void>((resolve, reject) => {
-      this.queue.client.deleteMessageBatch(params, err => {
-        err ? reject(err) : resolve()
-      })
-    })
+    return this.queue.client.deleteMessageBatch(params)
   }
 
   /**

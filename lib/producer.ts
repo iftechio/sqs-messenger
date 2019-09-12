@@ -1,28 +1,24 @@
 import * as Bluebird from 'bluebird'
 
-import { QueueClient, TopicClient, PublishResponse, SendMessageResult } from './client'
+import { Client } from './client'
 import Queue from './queue'
 import Topic from './topic'
+import { SQS } from 'aws-sdk'
 
 class Producer {
-  queueClient: QueueClient
-  topicClient: TopicClient
+  client: Client
 
-  constructor({
-    queueClient,
-    topicClient,
-  }: {
-    queueClient: QueueClient
-    topicClient: TopicClient
-  }) {
-    this.queueClient = queueClient
-    this.topicClient = topicClient
+  constructor(client: Client) {
+    this.client = client
   }
 
   /**
    * Send message to topic.
    */
-  async sendTopic<T extends object = any>(topic: Topic, message: T): Promise<PublishResponse> {
+  async sendTopic<T extends object = any>(
+    topic: Topic,
+    message: T,
+  ): Promise<{ MessageId?: string }> {
     const metaAttachedMessage = {
       _meta: { topicName: topic.name },
       ...(message as object),
@@ -37,16 +33,9 @@ class Producer {
     })
       .timeout(2000, `topic ${topic.name} is not ready within 2000ms`)
       .then(() => {
-        return new Promise((resolve, reject) => {
-          this.topicClient.publish(
-            {
-              TopicArn: topic.arn,
-              Message: encodedMessage,
-            },
-            (err, result) => {
-              err ? reject(err) : resolve(result)
-            },
-          )
+        return this.client.publish({
+          TopicArn: topic.arn,
+          Message: encodedMessage,
         })
       })
   }
@@ -58,7 +47,7 @@ class Producer {
     queue: Queue,
     message: T,
     opts?: { DelaySeconds?: number },
-  ): Promise<SendMessageResult> {
+  ): Promise<SQS.SendMessageResult> {
     const metaAttachedMessage = { _meta: {}, ...(message as object) }
     const encodedMessage = JSON.stringify(metaAttachedMessage)
     return new Bluebird(resolve => {
@@ -70,17 +59,10 @@ class Producer {
     })
       .timeout(2000, `queue ${queue.name} is not ready within 2000ms`)
       .then(() => {
-        return new Promise((resolve, reject) => {
-          this.queueClient.sendMessage(
-            {
-              ...opts,
-              QueueUrl: queue.queueUrl,
-              MessageBody: encodedMessage,
-            },
-            (err, result) => {
-              err ? reject(err) : resolve(result)
-            },
-          )
+        return this.client.sendMessage({
+          ...opts,
+          QueueUrl: queue.queueUrl,
+          MessageBody: encodedMessage,
         })
       })
   }

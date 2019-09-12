@@ -1,29 +1,27 @@
-import { SQS, SNS } from 'aws-sdk'
+import { SqsClient } from '../lib/client'
 import SqsMessenger from '../lib/messenger'
 
-const sqs = new SQS({
-  region: 'cn-north-1',
-  apiVersion: '2012-11-05',
-})
-
-const sns = new SNS({
-  region: 'cn-north-1',
-  apiVersion: '2010-03-31',
-})
-
-const sqsMessenger = new SqsMessenger(
-  { queueClient: sqs, topicClient: sns },
-  {
-    snsArnPrefix: 'arn:aws-cn:sns:cn-north-1:123456789012:',
-    sqsArnPrefix: 'arn:aws-cn:sqs:cn-north-1:123456789012:',
-    queueUrlPrefix: 'http://sqs.cn-north-1.amazonaws.com.cn/123456789012/',
-    resourceNamePrefix: 'test_',
-    errorHandler: err => {
-      console.log('Error handled')
-      console.error(err.stack)
-    },
+const client = new SqsClient({
+  sqsOptions: {
+    region: 'cn-north-1',
+    apiVersion: '2012-11-05',
   },
-)
+  snsOptions: {
+    region: 'cn-north-1',
+    apiVersion: '2010-03-31',
+  },
+})
+
+const sqsMessenger = new SqsMessenger(client, {
+  snsArnPrefix: 'arn:aws-cn:sns:cn-north-1:123456789012:',
+  sqsArnPrefix: 'arn:aws-cn:sqs:cn-north-1:123456789012:',
+  queueUrlPrefix: 'http://sqs.cn-north-1.amazonaws.com.cn/123456789012/',
+  resourceNamePrefix: 'test_',
+  errorHandler: err => {
+    console.log('Error handled')
+    console.error(err.stack)
+  },
+})
 
 const myTopic = sqsMessenger.createTopic('myTopic')
 const myQueue = sqsMessenger.createQueue('myQueue', {

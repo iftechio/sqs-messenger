@@ -1,28 +1,30 @@
 import test from './_init'
 import * as sinon from 'sinon'
 import * as Bluebird from 'bluebird'
-import { SQS } from 'aws-sdk'
 
 import Queue from '../lib/queue'
 import Config from '../lib/config'
+import { SqsClient } from '../lib/client'
 
 const config = new Config()
 
-const sqs = new SQS({
-  region: 'cn-north-1',
-  apiVersion: '2012-11-05',
+const client = new SqsClient({
+  sqsOptions: {
+    region: 'cn-north-1',
+    apiVersion: '2012-11-05',
+  },
 })
 
 test.before(() => {
-  sinon.stub(sqs, 'createQueue').callsArgWithAsync(1, null, { QueueUrl: 'http://test:c' })
+  sinon.stub(client, 'createQueue').resolves({ QueueUrl: 'http://test:c' })
 })
 
 test.cb.serial('should receive message', t => {
-  const c1 = new Queue(sqs, 'c1', {}, config)
+  const c1 = new Queue(client, 'c1', {}, config)
   t.context.sandbox
-    .stub(sqs, 'receiveMessage')
+    .stub(client, 'receiveMessage')
     .onFirstCall()
-    .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
+    .resolves({ Messages: [{ Body: '{"text":"hahaha"}' }] })
 
   c1.onMessage((message, done) => {
     t.deepEqual(message, { text: 'hahaha' })
@@ -32,38 +34,38 @@ test.cb.serial('should receive message', t => {
 })
 
 test.cb.serial('should delete message on done', t => {
-  const c2 = new Queue(sqs, 'c2', {}, config)
+  const c2 = new Queue(client, 'c2', {}, config)
   t.context.sandbox
-    .stub(sqs, 'receiveMessage')
+    .stub(client, 'receiveMessage')
     .onFirstCall()
-    .callsArgWithAsync(1, null, { Messages: [{ ReceiptHandle: '1', Body: '{"text":"hahaha"}' }] })
+    .resolves({ Messages: [{ ReceiptHandle: '1', Body: '{"text":"hahaha"}' }] })
 
   const mock = t.context.sandbox
-    .mock(sqs)
+    .mock(client)
     .expects('deleteMessage')
     .once()
     .withArgs({
       QueueUrl: 'http://test:c',
       ReceiptHandle: '1',
     })
-    .callsArgWithAsync(1, null, null)
+    .resolves()
 
   c2.onMessage((message, done) => {
     t.deepEqual(message, { text: 'hahaha' })
-    done()
+    setTimeout(() => {
+      done()
+      mock.verify()
+      t.end()
+    }, 200)
   })
-  setTimeout(() => {
-    mock.verify()
-    t.end()
-  }, 200)
+
 })
 
 test.serial('should handle consumer handler timeout', t => {
-  const c3 = new Queue(sqs, 'c3', {}, config)
+  const c3 = new Queue(client, 'c3', {}, config)
   t.context.sandbox
-    .stub(sqs, 'receiveMessage')
-    .onFirstCall()
-    .callsArgWithAsync(1, null, { Messages: [{ Body: '{"text":"hahaha"}' }] })
+    .stub(client, 'receiveMessage')
+    .resolves({ Messages: [{ ReceiptHandle: '1', Body: '{"text":"hahaha"}' }] })
 
   const consumer = c3.onMessage(
     () => {
@@ -81,11 +83,11 @@ test.serial('should handle consumer handler timeout', t => {
 })
 
 test.cb.serial('should delete batch messages on done', t => {
-  const c4 = new Queue(sqs, 'c4', {}, config)
+  const c4 = new Queue(client, 'c4', {}, config)
   t.context.sandbox
-    .stub(sqs, 'receiveMessage')
+    .stub(client, 'receiveMessage')
     .onFirstCall()
-    .callsArgWithAsync(1, null, {
+    .resolves({
       Messages: [
         { ReceiptHandle: '1', Body: '{"text":"hahaha1"}' },
         { ReceiptHandle: '2', Body: '{"text":"hahaha2"}' },
@@ -95,8 +97,8 @@ test.cb.serial('should delete batch messages on done', t => {
     })
 
   const mock = t.context.sandbox
-    .mock(sqs)
-    .expects('deleteMessageBatch')
+    .mock(client)
+    .expects('batchDeleteMessage')
     .once()
     .withArgs({
       QueueUrl: 'http://test:c',
@@ -107,7 +109,7 @@ test.cb.serial('should delete batch messages on done', t => {
         { Id: '3', ReceiptHandle: '4' },
       ],
     })
-    .callsArgWithAsync(1, null, null)
+    .resolves()
 
   c4.onMessage(
     (messages, done) => {
@@ -117,12 +119,13 @@ test.cb.serial('should delete batch messages on done', t => {
         { text: 'hahaha3' },
         { text: 'hahaha4' },
       ])
-      done()
+      setTimeout(() => {
+        done()
+        mock.verify()
+        t.end()
+      }, 200)
     },
     { batchHandle: true },
   )
-  setTimeout(() => {
-    mock.verify()
-    t.end()
-  }, 200)
+
 })

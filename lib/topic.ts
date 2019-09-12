@@ -1,7 +1,7 @@
 import * as Debug from 'debug'
 import { EventEmitter } from 'events'
 
-import { TopicClient, SubscribeResponse } from './client'
+import { Client } from './client'
 import Config from './config'
 import Queue from './queue'
 
@@ -12,26 +12,25 @@ class Topic extends EventEmitter {
   name: string
   realName: string
   arn: string
-  client: TopicClient
+  client: Client
 
-  constructor(topicClient: TopicClient, name: string, config: Config) {
+  constructor(client: Client, name: string, config: Config) {
     super()
-    this.client = topicClient
+    this.client = client
     this.name = name
     this.realName = config.resourceNamePrefix + name
     this.isReady = false
 
     debug(`Create topic ${this.name}`)
-    this.client.createTopic({ Name: this.realName }, (err, data) => {
-      if (err) {
-        this.emit('error', err)
-      } else {
+    this.client
+      .createTopic({ Name: this.realName })
+      .then(data => {
         debug('topic created %j', data)
         this.arn = data.TopicArn || ''
         this.isReady = true
         this.emit('ready')
-      }
-    })
+      })
+      .catch(err => this.emit('error', err))
   }
 
   /**
@@ -44,48 +43,33 @@ class Topic extends EventEmitter {
       })
     }
 
-    const data = await new Promise<SubscribeResponse>((resolve, reject) => {
-      this.client.subscribe(
-        {
+    const data = await new Promise<{ SubscriptionArn?: string }>((resolve, reject) => {
+      this.client
+        .subscribe({
           Protocol: 'sqs',
           TopicArn: this.arn,
           Endpoint: queue.arn,
-        },
-        (err, data2) => {
-          if (err) {
-            debug(
-              `Error subscribing ${queue.name}(${queue.realName}) to ${this.name}(${
-                this.realName
-              })`,
-            )
-            reject(err)
-          } else {
-            debug(
-              `Succeed subscribing ${queue.name}(${queue.realName}) to ${this.name}(${
-                this.realName
-              })`,
-            )
-            resolve(data2)
-          }
-        },
-      )
+        })
+        .then(data2 => {
+          debug(
+            `Succeed subscribing ${queue.name}(${queue.realName}) to ${this.name}(${
+              this.realName
+            })`,
+          )
+          resolve(data2)
+        })
+        .catch(err => {
+          debug(
+            `Error subscribing ${queue.name}(${queue.realName}) to ${this.name}(${this.realName})`,
+          )
+          reject(err)
+        })
     })
 
-    return new Promise<void>((resolve, reject) => {
-      this.client.setSubscriptionAttributes(
-        {
-          SubscriptionArn: data.SubscriptionArn!,
-          AttributeName: 'RawMessageDelivery',
-          AttributeValue: 'true',
-        },
-        err => {
-          if (err) {
-            reject(err)
-          } else {
-            resolve()
-          }
-        },
-      )
+    return this.client.setSubscriptionAttributes({
+      SubscriptionArn: data.SubscriptionArn!,
+      AttributeName: 'RawMessageDelivery',
+      AttributeValue: 'true',
     })
   }
 }
