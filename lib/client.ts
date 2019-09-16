@@ -2,11 +2,26 @@ import { SQS, SNS } from 'aws-sdk'
 import * as MNS from '@ruguoapp/mns-node-sdk'
 
 export interface Client {
+  /**
+   * Create a queue.
+   */
   createQueue(params: {
     QueueName: string
-    Attributes?: { [key: string]: string | number | boolean }
+    Attributes?: {
+      MaximumMessageSize: number
+      VisibilityTimeout: number
+      DelaySeconds: number
+      Policy?: string
+      RedrivePolicy?: string
+      MessageRetentionPeriod?: number
+      PollingWaitSeconds?: number
+      LoggingEnabled?: boolean
+    }
   }): Promise<{ Locator?: string }>
 
+  /**
+   * Send a message.
+   */
   sendMessage(params: {
     Locator: string
     MessageBody: string
@@ -17,7 +32,10 @@ export interface Client {
     MD5OfMessageBody?: string
   }>
 
-  receiveMessage(params: {
+  /**
+   * Receive a batch of messages.
+   */
+  receiveMessageBatch(params: {
     Locator: string
     MaxNumberOfMessages: number
     WaitTimeSeconds: number
@@ -31,8 +49,14 @@ export interface Client {
     }[]
   }>
 
+  /**
+   * Delete a message.
+   */
   deleteMessage(params: { Locator: string; ReceiptHandle: string }): Promise<void>
 
+  /**
+   * Delete a batch of messages.
+   */
   deleteMessageBatch(params: {
     Locator: string
     Entries: {
@@ -41,6 +65,9 @@ export interface Client {
     }[]
   }): Promise<void>
 
+  /**
+   * Create a topic.
+   */
   createTopic(params: {
     TopicName: string
     Attributes?: {
@@ -49,18 +76,27 @@ export interface Client {
     }
   }): Promise<{ Locator?: string }>
 
+  /**
+   * Subscribe queue to topic.
+   */
   subscribe(params: {
     TopicLocator: string
     Protocol?: string
     Endpoint: string
   }): Promise<{ SubscribeLocator?: string }>
 
+  /**
+   * Set subscription attributes.
+   */
   setSubscriptionAttributes(params: {
     SubscribeLocator: string
     AttributeName?: string
     AttributeValue: string
   }): Promise<void>
 
+  /**
+   * Send message to topic.
+   */
   publish(params: {
     Locator: string
     Message: string
@@ -82,9 +118,34 @@ export class SqsClient implements Client {
     this.sns = new SNS(snsOptions)
   }
 
-  async createQueue(params: SQS.CreateQueueRequest) {
+  async createQueue(params: {
+    QueueName: string
+    Attributes: {
+      MaximumMessageSize: number
+      VisibilityTimeout: number
+      DelaySeconds: number
+      Policy?: string
+      RedrivePolicy?: string
+    }
+  }) {
+    const createQueueRequest: SQS.CreateQueueRequest = {
+      QueueName: params.QueueName,
+    }
+    if (params.Attributes) {
+      createQueueRequest.Attributes = {
+        MaximumMessageSize: params.Attributes.MaximumMessageSize.toString(),
+        VisibilityTimeout: params.Attributes.VisibilityTimeout.toString(),
+        DelaySeconds: params.Attributes.DelaySeconds.toString(),
+      }
+      if (params.Attributes.Policy) {
+        createQueueRequest.Attributes.Policy = params.Attributes.Policy
+      }
+      if (params.Attributes.RedrivePolicy) {
+        createQueueRequest.Attributes.RedrivePolicy = params.Attributes.RedrivePolicy
+      }
+    }
     return new Promise<{ Locator?: string }>((resolve, reject) => {
-      this.sqs.createQueue(params, (err, data) => {
+      this.sqs.createQueue(createQueueRequest, (err, data) => {
         err ? reject(err) : resolve({ Locator: data.QueueUrl })
       })
     })
@@ -108,7 +169,7 @@ export class SqsClient implements Client {
     })
   }
 
-  async receiveMessage(params: {
+  async receiveMessageBatch(params: {
     Locator: string
     MaxNumberOfMessages: number
     WaitTimeSeconds: number
@@ -226,8 +287,31 @@ export class MnsClient implements Client {
     this.mns = new MNS.Client(options)
   }
 
-  async createQueue(params: MNS.Types.CreateQueueRequest) {
-    await this.mns.createQueue(params)
+  async createQueue(params: {
+    QueueName: string
+    Attributes?: {
+      MaximumMessageSize: number
+      VisibilityTimeout: number
+      DelaySeconds: number
+      MessageRetentionPeriod?: number
+      PollingWaitSeconds?: number
+      LoggingEnabled?: boolean
+    }
+  }) {
+    const createQueueRequest: MNS.Types.CreateQueueRequest = {
+      QueueName: params.QueueName,
+    }
+    if (params.Attributes) {
+      createQueueRequest.Attributes = {
+        MaximumMessageSize: params.Attributes!.MaximumMessageSize,
+        VisibilityTimeout: params.Attributes!.VisibilityTimeout,
+        DelaySeconds: params.Attributes!.DelaySeconds,
+        MessageRetentionPeriod: params.Attributes!.MessageRetentionPeriod,
+        PollingWaitSeconds: params.Attributes!.PollingWaitSeconds,
+        LoggingEnabled: params.Attributes!.LoggingEnabled,
+      }
+    }
+    await this.mns.createQueue(createQueueRequest)
     return { Locator: params.QueueName }
   }
 
@@ -252,7 +336,7 @@ export class MnsClient implements Client {
     }
   }
 
-  async receiveMessage(params: {
+  async receiveMessageBatch(params: {
     Locator: string
     MaxNumberOfMessages: number
     WaitTimeSeconds: number

@@ -13,13 +13,13 @@ class Queue extends EventEmitter {
   name: string
   opts: {
     withDeadLetter: boolean
-    visibilityTimeout: string
-    maximumMessageSize: string
+    visibilityTimeout: number
+    maximumMessageSize: number
     isDeadLetterQueue: boolean
     maxReceiveCount: number
-    delaySeconds: string
-    messageRetentionPeriod: string
-    pollingWaitSeconds: string
+    delaySeconds: number
+    messageRetentionPeriod: number
+    pollingWaitSeconds: number
     loggingEnabled: boolean
   }
   realName: string
@@ -52,12 +52,12 @@ class Queue extends EventEmitter {
       withDeadLetter: typeof opts.withDeadLetter === 'boolean' ? opts.withDeadLetter : false,
       isDeadLetterQueue:
         typeof opts.isDeadLetterQueue === 'boolean' ? opts.isDeadLetterQueue : false,
-      visibilityTimeout: (opts.visibilityTimeout || 30).toString(),
-      maximumMessageSize: (opts.maximumMessageSize || 65536).toString(),
+      visibilityTimeout: opts.visibilityTimeout || 30,
+      maximumMessageSize: opts.maximumMessageSize || 65536,
       maxReceiveCount: opts.maxReceiveCount || 5,
-      delaySeconds: (opts.delaySeconds || 0).toString(),
-      messageRetentionPeriod: (opts.messageRetentionPeriod || 345600).toString(),
-      pollingWaitSeconds: (opts.pollingWaitSeconds || 0).toString(),
+      delaySeconds: opts.delaySeconds || 0,
+      messageRetentionPeriod: opts.messageRetentionPeriod || 345600,
+      pollingWaitSeconds: opts.pollingWaitSeconds || 0,
       loggingEnabled: typeof opts.loggingEnabled === 'boolean' ? opts.loggingEnabled : false,
     }
     this.name = name
@@ -83,7 +83,16 @@ class Queue extends EventEmitter {
     const opts = this.opts
     const createParams: {
       QueueName: string
-      Attributes?: { [key: string]: string | number | boolean }
+      Attributes?: {
+        MaximumMessageSize: number
+        VisibilityTimeout: number
+        DelaySeconds: number
+        Policy?: string
+        RedrivePolicy?: string
+        MessageRetentionPeriod?: number
+        PollingWaitSeconds?: number
+        LoggingEnabled?: boolean
+      }
     } = opts.isDeadLetterQueue
       ? {
           QueueName: this.realName,

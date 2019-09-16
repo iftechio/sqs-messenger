@@ -47,12 +47,12 @@ test.serial('should create queue', t => {
     t.deepEqual(mock.firstCall.args[0], {
       QueueName: 'test_q1',
       Attributes: {
-        DelaySeconds: '0',
-        VisibilityTimeout: '30',
-        MaximumMessageSize: '65536',
+        DelaySeconds: 0,
+        VisibilityTimeout: 30,
+        MaximumMessageSize: 65536,
         Policy: expectPolicy,
-        MessageRetentionPeriod: '345600',
-        PollingWaitSeconds: '0',
+        MessageRetentionPeriod: 345600,
+        PollingWaitSeconds: 0,
         LoggingEnabled: false,
       },
     })
@@ -93,13 +93,13 @@ test.serial('should create deadletter queue', t => {
     t.deepEqual(mock.secondCall.args[0], {
       QueueName: 'test_q2',
       Attributes: {
-        DelaySeconds: '0',
-        VisibilityTimeout: '30',
-        MaximumMessageSize: '65536',
+        DelaySeconds: 0,
+        VisibilityTimeout: 30,
+        MaximumMessageSize: 65536,
         Policy: expectPolicy,
         RedrivePolicy: '{"maxReceiveCount":"5", "deadLetterTargetArn":"arn:sqs:test:test_q2-dl"}',
-        MessageRetentionPeriod: '345600',
-        PollingWaitSeconds: '0',
+        MessageRetentionPeriod: 345600,
+        PollingWaitSeconds: 0,
         LoggingEnabled: false,
       },
     })
@@ -112,7 +112,7 @@ function shutdownMacro(t, input, expected) {
     Locator: 'http://test:c',
   })
   sandbox
-    .stub(client, 'receiveMessage')
+    .stub(client, 'receiveMessageBatch')
     .onFirstCall()
     .resolves({
       Messages: [{ Body: '{}' }],

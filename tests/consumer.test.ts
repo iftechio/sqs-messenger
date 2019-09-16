@@ -22,7 +22,7 @@ test.before(() => {
 test.cb.serial('should receive message', t => {
   const c1 = new Queue(client, 'c1', {}, config)
   t.context.sandbox
-    .stub(client, 'receiveMessage')
+    .stub(client, 'receiveMessageBatch')
     .onFirstCall()
     .resolves({ Messages: [{ Body: '{"text":"hahaha"}' }] })
 
@@ -36,7 +36,7 @@ test.cb.serial('should receive message', t => {
 test.cb.serial('should delete message on done', t => {
   const c2 = new Queue(client, 'c2', {}, config)
   t.context.sandbox
-    .stub(client, 'receiveMessage')
+    .stub(client, 'receiveMessageBatch')
     .onFirstCall()
     .resolves({ Messages: [{ ReceiptHandle: '1', Body: '{"text":"hahaha"}' }] })
 
@@ -63,7 +63,7 @@ test.cb.serial('should delete message on done', t => {
 test.serial('should handle consumer handler timeout', t => {
   const c3 = new Queue(client, 'c3', {}, config)
   t.context.sandbox
-    .stub(client, 'receiveMessage')
+    .stub(client, 'receiveMessageBatch')
     .resolves({ Messages: [{ ReceiptHandle: '1', Body: '{"text":"hahaha"}' }] })
 
   const consumer = c3.onMessage(
@@ -84,7 +84,7 @@ test.serial('should handle consumer handler timeout', t => {
 test.cb.serial('should delete batch messages on done', t => {
   const c4 = new Queue(client, 'c4', {}, config)
   t.context.sandbox
-    .stub(client, 'receiveMessage')
+    .stub(client, 'receiveMessageBatch')
     .onFirstCall()
     .resolves({
       Messages: [

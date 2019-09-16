@@ -27,7 +27,7 @@ class Consumer<T = any> extends EventEmitter {
     super()
     this.queue = queue
     this.batchSize = opts.batchSize || 10
-    this.visibilityTimeout = opts.visibilityTimeout || parseInt(queue.opts.visibilityTimeout) || 30
+    this.visibilityTimeout = opts.visibilityTimeout || 30
     this.batchHandle = !!opts.batchHandle
     this.running = false
     this.handler = handler
@@ -46,7 +46,7 @@ class Consumer<T = any> extends EventEmitter {
     if (this.running) {
       debug('Polling for messages')
       this.queue.client
-        .receiveMessage({
+        .receiveMessageBatch({
           Locator: this.queue.locator,
           MaxNumberOfMessages: this.batchSize,
           WaitTimeSeconds: 20, // max time long polling

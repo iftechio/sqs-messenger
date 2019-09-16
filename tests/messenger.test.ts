@@ -46,7 +46,7 @@ test.serial('create queue', t => {
 
 test.cb.serial('register one consumer', t => {
   t.context.sandbox
-    .stub(client, 'receiveMessage')
+    .stub(client, 'receiveMessageBatch')
     .onFirstCall()
     .resolves({
       Messages: [{ Body: '{}' }],
@@ -69,11 +69,11 @@ test.cb.serial('register one consumer', t => {
 })
 
 test.cb.serial('register two consumers', t => {
-  const receiveMessage = t.context.sandbox.stub(client, 'receiveMessage')
-  receiveMessage.onFirstCall().resolves({
+  const receiveMessageBatch = t.context.sandbox.stub(client, 'receiveMessageBatch')
+  receiveMessageBatch.onFirstCall().resolves({
     Messages: [{ Body: '{"n": 1}' }],
   })
-  receiveMessage.onSecondCall().resolves({
+  receiveMessageBatch.onSecondCall().resolves({
     Messages: [{ Body: '{"n": 2}' }],
   })
 

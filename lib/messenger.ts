@@ -146,6 +146,9 @@ class Messenger {
       maximumMessageSize?: number
       maxReceiveCount?: number
       delaySeconds?: number
+      messageRetentionPeriod?: number
+      pollingWaitSeconds?: number
+      loggingEnabled?: boolean
     } = {},
   ): Queue {
     const queue = new Queue(this.client, name, opts, this.config)
