@@ -3,22 +3,24 @@ sqs-messenger
 
 This library makes message sending/receiving in SQS/SNS easy.
 
+Now also support Aliyun MNS.
+
 ## Simple usage
 ```javascript
-const AWS = require('aws-sdk')
-const SqsMessenger = require('sqs-messenger')
+const SqsMessenger, { SqsClient } = require('sqs-messenger')
 
-const sqs = new AWS.SQS({
-  region: 'cn-north-1',
-  sqs: '2012-11-05',
+const client = new SqsClient({
+  sqsOptions: {
+    region: 'cn-north-1',
+    apiVersion: '2012-11-05',
+  },
+  snsOptions: {
+    region: 'cn-north-1',
+    apiVersion: '2010-03-31',
+  },
 })
 
-const sns = new AWS.SNS({
-  region: 'cn-north-1',
-  sns: '2010-03-31',
-})
-
-const sqsMessenger = new SqsMessenger({ sqs, sns }, {
+const sqsMessenger = new SqsMessenger(client, {
   snsArnPrefix: 'arn:aws-cn:sns:cn-north-1:123456789012:',
   sqsArnPrefix: 'arn:aws-cn:sqs:cn-north-1:123456789012:',
   queueUrlPrefix: 'http://sqs.cn-north-1.amazonaws.com.cn/123456789012/',
@@ -43,6 +45,48 @@ sqsMessenger.sendTopicMessage('myTopic', { text: 'a simple message send to topic
 
 // send message to queue
 sqsMessenger.sendQueueMessage('myQueue', { text: 'a simple message send directly to queue' })
+```
+
+or
+
+```javascript
+const MnsMessenger, { MnsClient } = require('sqs-messenger')
+
+const client = new MnsClient({
+  accountId: '123456789012',
+  region: 'cn-hangzhou',
+  accessKeyId: 'ACCESS_KEY_ID',
+  accessKeySecret: 'ACCESS_KEY_SECRET',
+})
+
+const mnsMessenger = new MnsMessenger(client, {
+  sqsArnPrefix: 'acs:mns:cn-hangzhou:123456789012:queues/',
+  queueUrlPrefix: 'http://123456789012.mns.cn-hangzhou.aliyuncs.com/queues/',
+  resourceNamePrefix: 'test_',
+  errorHandler: err => {
+    console.log('Error handled')
+    console.error(err.stack)
+  },
+})
+
+const myTopic = mnsMessenger.createTopic('myTopic')
+const myQueue = mnsMessenger.createQueue('myQueue', {
+  bindTopic: myTopic,
+})
+
+
+// register consumer on queue
+mnsMessenger.on('myQueue', (message, done) => {
+  // do something
+  console.log(message)
+  done()
+})
+
+// send message to topic
+mnsMessenger.sendTopicMessage('myTopic', { text: 'a simple message send to topic' })
+
+// send message to queue
+mnsMessenger.sendQueueMessage('myQueue', { text: 'a simple message send directly to queue' })
 ```
 
 ## Advanced usage
@@ -117,7 +161,7 @@ process.once('SIGTERM', () => {
 ```
 
 ## Features
- - Automatically create SNS topic, SQS queue and subscription
+ - Automatically create topic, queue and subscription
  - Dead letter support
  - Automatically acknowledge message on consumer finished
  - Graceful shutdown support

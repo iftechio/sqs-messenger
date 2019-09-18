@@ -9,8 +9,8 @@ const client = new MnsClient({
 })
 
 const mnsMessenger = new MnsMessenger(client, {
-  sqsArnPrefix: 'https://123456789012.mns.cn-hangzhou.aliyuncs.com/',
-  queueUrlPrefix: 'https://123456789012.mns.cn-hangzhou.aliyuncs.com/',
+  sqsArnPrefix: 'acs:mns:cn-hangzhou:123456789012:queues/',
+  queueUrlPrefix: 'http://123456789012.mns.cn-hangzhou.aliyuncs.com/queues/',
   resourceNamePrefix: 'test_',
   errorHandler: err => {
     console.log('Error handled')

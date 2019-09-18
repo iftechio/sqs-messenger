@@ -94,10 +94,10 @@ class Queue extends EventEmitter {
         LoggingEnabled?: boolean
       }
     } = opts.isDeadLetterQueue
-      ? {
+        ? {
           QueueName: this.realName,
         }
-      : {
+        : {
           QueueName: this.realName,
           Attributes: {
             MaximumMessageSize: opts.maximumMessageSize,
@@ -138,7 +138,7 @@ class Queue extends EventEmitter {
         // set redrive policy on origin queue
         createParams.Attributes!.RedrivePolicy = `{"maxReceiveCount":"${
           opts.maxReceiveCount
-        }", "deadLetterTargetArn":"${this.config.sqsArnPrefix}${deadLetterQueue.realName}"}`
+          }", "deadLetterTargetArn":"${this.config.sqsArnPrefix}${deadLetterQueue.realName}"}`
 
         deadLetterQueue.on('ready', () => {
           resolve()
@@ -152,10 +152,18 @@ class Queue extends EventEmitter {
         .createQueue(createParams)
         .then(data => resolve(data))
         .catch(err => {
+          // SQS Error
           if (err.name === 'QueueAlreadyExists') {
             console.warn(`Queue [${this.realName}] already exists`, err.stack)
             // ignore QueueAlreadyExists error
             resolve({ Locator: this.config.queueUrlPrefix + createParams.QueueName })
+            return
+          }
+          // MNS Error
+          if (err.name === 'QueueAlreadyExist') {
+            console.warn(`Queue [${this.realName}] already exists`, err.stack)
+            // ignore MNSQueueAlreadyExistErr error
+            resolve({ Locator: createParams.QueueName })
             return
           }
           reject(err)

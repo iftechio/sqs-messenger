@@ -283,6 +283,8 @@ export class MnsClient implements Client {
     secure?: boolean
     internal?: boolean
     vpc?: boolean
+    keepAlive?: boolean
+    retries?: number
   }) {
     this.mns = new MNS.Client(options)
   }
@@ -392,6 +394,7 @@ export class MnsClient implements Client {
       SubscriptionName: `${params.TopicLocator}-${params.Endpoint}`,
       Attributes: {
         Endpoint: params.Endpoint,
+        NotifyContentFormat: 'SIMPLIFIED'
       },
     }
     await this.mns.subscribe(subscribeParams)
