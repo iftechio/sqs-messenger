@@ -94,10 +94,10 @@ class Queue extends EventEmitter {
         LoggingEnabled?: boolean
       }
     } = opts.isDeadLetterQueue
-        ? {
+      ? {
           QueueName: this.realName,
         }
-        : {
+      : {
           QueueName: this.realName,
           Attributes: {
             MaximumMessageSize: opts.maximumMessageSize,
@@ -138,7 +138,7 @@ class Queue extends EventEmitter {
         // set redrive policy on origin queue
         createParams.Attributes!.RedrivePolicy = `{"maxReceiveCount":"${
           opts.maxReceiveCount
-          }", "deadLetterTargetArn":"${this.config.sqsArnPrefix}${deadLetterQueue.realName}"}`
+        }", "deadLetterTargetArn":"${this.config.sqsArnPrefix}${deadLetterQueue.realName}"}`
 
         deadLetterQueue.on('ready', () => {
           resolve()

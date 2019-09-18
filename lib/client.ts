@@ -394,7 +394,7 @@ export class MnsClient implements Client {
       SubscriptionName: `${params.TopicLocator}-${params.Endpoint}`,
       Attributes: {
         Endpoint: params.Endpoint,
-        NotifyContentFormat: 'SIMPLIFIED'
+        NotifyContentFormat: 'SIMPLIFIED',
       },
     }
     await this.mns.subscribe(subscribeParams)
