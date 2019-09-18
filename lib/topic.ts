@@ -49,6 +49,7 @@ class Topic extends EventEmitter {
           TopicLocator: this.Locator,
           Protocol: 'sqs',
           Endpoint: queue.arn,
+          QueueLocator: queue.locator,
         })
         .then(data2 => {
           debug(

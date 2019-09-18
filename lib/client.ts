@@ -83,6 +83,7 @@ export interface Client {
     TopicLocator: string
     Protocol?: string
     Endpoint: string
+    QueueLocator?: string
   }): Promise<{ SubscribeLocator?: string }>
 
   /**
@@ -388,10 +389,10 @@ export class MnsClient implements Client {
     return { Locator: params.TopicName }
   }
 
-  async subscribe(params: { TopicLocator: string; Endpoint: string }) {
+  async subscribe(params: { TopicLocator: string; Endpoint: string; QueueLocator: string }) {
     const subscribeParams: MNS.Types.SubscribeRequest = {
       TopicName: params.TopicLocator,
-      SubscriptionName: `${params.TopicLocator}-${params.Endpoint}`,
+      SubscriptionName: `${params.TopicLocator}-${params.QueueLocator}`,
       Attributes: {
         Endpoint: params.Endpoint,
         NotifyContentFormat: 'SIMPLIFIED',
