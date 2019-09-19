@@ -1,28 +1,29 @@
 import test from './_init'
-import { SQS, SNS } from 'aws-sdk'
 
 import Producer from '../lib/producer'
 import Topic from '../lib/topic'
 import Queue from '../lib/queue'
+import { SqsClient } from '../lib/client'
 
-const sqs = new SQS({
-  region: 'cn-north-1',
-  apiVersion: '2012-11-05',
+const client = new SqsClient({
+  sqsOptions: {
+    region: 'cn-north-1',
+    apiVersion: '2012-11-05',
+  },
+  snsOptions: {
+    region: 'cn-north-1',
+    apiVersion: '2010-03-31',
+  },
 })
 
-const sns = new SNS({
-  region: 'cn-north-1',
-  apiVersion: '2010-03-31',
-})
-
-const producer = new Producer({ sqs, sns })
+const producer = new Producer(client)
 
 test('should send to topic', t => {
   const mock = t.context.sandbox
-    .mock(sns)
+    .mock(client)
     .expects('publish')
     .once()
-    .callsArgWithAsync(1, null, {})
+    .resolves({})
 
   const message = { text: 'abc' }
   const metaAttachedMessage = { _meta: { topicName: 'testTopic' }, ...message }
@@ -30,7 +31,7 @@ test('should send to topic', t => {
     .sendTopic(
       {
         isReady: true,
-        arn: 'arn:sns:test',
+        Locator: 'arn:sns:test',
         name: 'testTopic',
       } as Topic,
       message,
@@ -38,7 +39,7 @@ test('should send to topic', t => {
     .then(() => {
       mock.verify()
       t.deepEqual(mock.firstCall.args[0], {
-        TopicArn: 'arn:sns:test',
+        Locator: 'arn:sns:test',
         Message: JSON.stringify(metaAttachedMessage),
       })
     })
@@ -46,10 +47,10 @@ test('should send to topic', t => {
 
 test('should send to queue', t => {
   const mock = t.context.sandbox
-    .mock(sqs)
+    .mock(client)
     .expects('sendMessage')
     .once()
-    .callsArgWithAsync(1, null, {})
+    .resolves({})
 
   const message = { text: 'abc' }
   const metaAttachedMessage = { _meta: {}, ...message }
@@ -58,7 +59,7 @@ test('should send to queue', t => {
       {
         isReady: true,
         arn: 'arn:sqs:test',
-        queueUrl: 'http://sqs.test.com/q1',
+        locator: 'http://sqs.test.com/q1',
         name: 'testQueue',
       } as Queue,
       message,
@@ -66,7 +67,7 @@ test('should send to queue', t => {
     .then(() => {
       mock.verify()
       t.deepEqual(mock.firstCall.args[0], {
-        QueueUrl: 'http://sqs.test.com/q1',
+        Locator: 'http://sqs.test.com/q1',
         MessageBody: JSON.stringify(metaAttachedMessage),
       })
     })

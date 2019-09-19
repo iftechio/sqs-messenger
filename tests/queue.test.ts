@@ -1,14 +1,16 @@
 import test from './_init'
 import * as Bluebird from 'bluebird'
 import * as sinon from 'sinon'
-import { SQS } from 'aws-sdk'
 
 import Queue from '../lib/queue'
 import Config from '../lib/config'
+import { SqsClient } from '../lib/client'
 
-const sqs = new SQS({
-  region: 'cn-north-1',
-  apiVersion: '2012-11-05',
+const client = new SqsClient({
+  sqsOptions: {
+    region: 'cn-north-1',
+    apiVersion: '2012-11-05',
+  },
 })
 
 const config = new Config({
@@ -18,15 +20,15 @@ const config = new Config({
 
 test.serial('should create queue', t => {
   const mock = t.context.sandbox
-    .mock(sqs)
+    .mock(client)
     .expects('createQueue')
     .once()
-    .callsArgWithAsync(1, null, {
-      QueueUrl: 'http://test_q1',
+    .resolves({
+      Locator: 'http://test_q1',
     })
 
   // tslint:disable-next-line:no-unused-expression
-  new Queue(sqs, 'q1', {}, config)
+  new Queue(client, 'q1', {}, config)
   return Bluebird.delay(200).then(() => {
     mock.verify()
     const expectPolicy = JSON.stringify({
@@ -45,10 +47,13 @@ test.serial('should create queue', t => {
     t.deepEqual(mock.firstCall.args[0], {
       QueueName: 'test_q1',
       Attributes: {
-        DelaySeconds: '0',
-        VisibilityTimeout: '30',
-        MaximumMessageSize: '262144',
+        DelaySeconds: 0,
+        VisibilityTimeout: 30,
+        MaximumMessageSize: 65536,
         Policy: expectPolicy,
+        MessageRetentionPeriod: 345600,
+        PollingWaitSeconds: 0,
+        LoggingEnabled: false,
       },
     })
   })
@@ -56,15 +61,15 @@ test.serial('should create queue', t => {
 
 test.serial('should create deadletter queue', t => {
   const mock = t.context.sandbox
-    .mock(sqs)
+    .mock(client)
     .expects('createQueue')
     .twice()
-    .callsArgWithAsync(1, null, {
-      QueueUrl: 'http://test_q1',
+    .resolves({
+      Locator: 'http://test_q1',
     })
 
   // tslint:disable-next-line:no-unused-expression
-  new Queue(sqs, 'q2', { withDeadLetter: true }, config)
+  new Queue(client, 'q2', { withDeadLetter: true }, config)
   return Bluebird.delay(200).then(() => {
     mock.verify()
     t.deepEqual(mock.firstCall.args[0], {
@@ -88,11 +93,14 @@ test.serial('should create deadletter queue', t => {
     t.deepEqual(mock.secondCall.args[0], {
       QueueName: 'test_q2',
       Attributes: {
-        DelaySeconds: '0',
-        VisibilityTimeout: '30',
-        MaximumMessageSize: '262144',
+        DelaySeconds: 0,
+        VisibilityTimeout: 30,
+        MaximumMessageSize: 65536,
         Policy: expectPolicy,
         RedrivePolicy: '{"maxReceiveCount":"5", "deadLetterTargetArn":"arn:sqs:test:test_q2-dl"}',
+        MessageRetentionPeriod: 345600,
+        PollingWaitSeconds: 0,
+        LoggingEnabled: false,
       },
     })
   })
@@ -100,19 +108,22 @@ test.serial('should create deadletter queue', t => {
 
 function shutdownMacro(t, input, expected) {
   const sandbox = t.context.sandbox
-  sandbox.stub(sqs, 'createQueue').callsArgWithAsync(1, null, {
-    QueueUrl: 'http://test:c',
+  sandbox.stub(client, 'createQueue').resolves({
+    Locator: 'http://test:c',
   })
   sandbox
-    .stub(sqs, 'receiveMessage')
+    .stub(client, 'receiveMessageBatch')
     .onFirstCall()
-    .callsArgWithAsync(1, null, {
+    .resolves({
       Messages: [{ Body: '{}' }],
     })
-  // tslint:disable-next-line:no-unused
-  sandbox.stub(sqs, 'deleteMessage').callsFake((params, callback) => callback())
+  sandbox
+    .stub(client, 'deleteMessage')
+    // tslint:disable-next-line:no-unused
+    .callsFake((params, callback) => callback())
+    .resolves()
 
-  const queue = new Queue(sqs, 'q', {}, config)
+  const queue = new Queue(client, 'q', {}, config)
   return Bluebird.delay(200).then(() => {
     const spy = sinon.spy()
     // tslint:disable-next-line:no-unused

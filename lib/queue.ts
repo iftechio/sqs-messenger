@@ -1,34 +1,37 @@
 import * as Debug from 'debug'
 import * as Bluebird from 'bluebird'
 import { EventEmitter } from 'events'
-import { SQS } from 'aws-sdk'
 
+import { Client } from './client'
 import Consumer from './consumer'
 import Config from './config'
 
 const debug = Debug('sqs-messenger:queue')
 
 class Queue extends EventEmitter {
-  sqs: SQS
+  client: Client
   name: string
   opts: {
     withDeadLetter: boolean
-    visibilityTimeout: string
-    maximumMessageSize: string
+    visibilityTimeout: number
+    maximumMessageSize: number
     isDeadLetterQueue: boolean
     maxReceiveCount: number
-    delaySeconds: string
+    delaySeconds: number
+    messageRetentionPeriod: number
+    pollingWaitSeconds: number
+    loggingEnabled: boolean
   }
   realName: string
   arn: string
   isReady: boolean
   consumers: Consumer[]
-  queueUrl: string
+  locator: string
   deadLetterQueue: Queue
   config: Config
 
   constructor(
-    sqs: SQS,
+    client: Client,
     name: string,
     opts: {
       withDeadLetter?: boolean
@@ -37,19 +40,25 @@ class Queue extends EventEmitter {
       isDeadLetterQueue?: boolean
       maxReceiveCount?: number
       delaySeconds?: number
+      messageRetentionPeriod?: number
+      pollingWaitSeconds?: number
+      loggingEnabled?: boolean
     },
     config: Config,
   ) {
     super()
-    this.sqs = sqs
+    this.client = client
     this.opts = {
       withDeadLetter: typeof opts.withDeadLetter === 'boolean' ? opts.withDeadLetter : false,
-      visibilityTimeout: (opts.visibilityTimeout || 30).toString(),
-      maximumMessageSize: (opts.maximumMessageSize || 262144).toString(),
       isDeadLetterQueue:
         typeof opts.isDeadLetterQueue === 'boolean' ? opts.isDeadLetterQueue : false,
+      visibilityTimeout: opts.visibilityTimeout || 30,
+      maximumMessageSize: opts.maximumMessageSize || 65536,
       maxReceiveCount: opts.maxReceiveCount || 5,
-      delaySeconds: (opts.delaySeconds || 0).toString(),
+      delaySeconds: opts.delaySeconds || 0,
+      messageRetentionPeriod: opts.messageRetentionPeriod || 345600,
+      pollingWaitSeconds: opts.pollingWaitSeconds || 0,
+      loggingEnabled: typeof opts.loggingEnabled === 'boolean' ? opts.loggingEnabled : false,
     }
     this.name = name
     this.realName = config.resourceNamePrefix + name
@@ -61,7 +70,7 @@ class Queue extends EventEmitter {
     this._createQueue().then(
       data => {
         debug('Queue created', data)
-        this.queueUrl = data.QueueUrl!
+        this.locator = data.Locator!
         this.isReady = true
         this.emit('ready')
       },
@@ -69,10 +78,22 @@ class Queue extends EventEmitter {
     )
   }
 
-  async _createQueue(): Promise<{ QueueUrl?: string }> {
+  async _createQueue(): Promise<{ Locator?: string }> {
     debug(`Creating queue ${this.realName}`)
     const opts = this.opts
-    const createParams: SQS.Types.CreateQueueRequest = opts.isDeadLetterQueue
+    const createParams: {
+      QueueName: string
+      Attributes?: {
+        MaximumMessageSize: number
+        VisibilityTimeout: number
+        DelaySeconds: number
+        Policy?: string
+        RedrivePolicy?: string
+        MessageRetentionPeriod?: number
+        PollingWaitSeconds?: number
+        LoggingEnabled?: boolean
+      }
+    } = opts.isDeadLetterQueue
       ? {
           QueueName: this.realName,
         }
@@ -95,6 +116,9 @@ class Queue extends EventEmitter {
               }
             ]
           }`.replace(/\s/g, ''),
+            MessageRetentionPeriod: opts.messageRetentionPeriod,
+            PollingWaitSeconds: opts.pollingWaitSeconds,
+            LoggingEnabled: opts.loggingEnabled,
           },
         }
 
@@ -104,7 +128,7 @@ class Queue extends EventEmitter {
 
         debug('Creating dead letter Queue', deadLetterQueueName)
         const deadLetterQueue = new Queue(
-          this.sqs,
+          this.client,
           deadLetterQueueName,
           { isDeadLetterQueue: true },
           this.config,
@@ -123,20 +147,27 @@ class Queue extends EventEmitter {
         resolve()
       }
     })
-    return new Promise<SQS.Types.CreateQueueResult>((resolve, reject) => {
-      this.sqs.createQueue(createParams, (err, data) => {
-        if (err) {
+    return new Promise<{ Locator?: string }>((resolve, reject) => {
+      this.client
+        .createQueue(createParams)
+        .then(data => resolve(data))
+        .catch(err => {
+          // SQS Error
           if (err.name === 'QueueAlreadyExists') {
             console.warn(`Queue [${this.realName}] already exists`, err.stack)
             // ignore QueueAlreadyExists error
-            resolve({ QueueUrl: this.config.queueUrlPrefix + createParams.QueueName })
+            resolve({ Locator: this.config.queueUrlPrefix + createParams.QueueName })
+            return
+          }
+          // MNS Error
+          if (err.name === 'QueueAlreadyExist') {
+            console.warn(`Queue [${this.realName}] already exists`, err.stack)
+            // ignore MNSQueueAlreadyExistErr error
+            resolve({ Locator: createParams.QueueName })
             return
           }
           reject(err)
-        } else {
-          resolve(data)
-        }
-      })
+        })
     })
   }
 

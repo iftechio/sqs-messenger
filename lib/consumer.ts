@@ -1,7 +1,6 @@
 import * as Debug from 'debug'
 import * as Bluebird from 'bluebird'
 import { EventEmitter } from 'events'
-import { SQS } from 'aws-sdk'
 
 import Queue from './queue'
 
@@ -28,7 +27,7 @@ class Consumer<T = any> extends EventEmitter {
     super()
     this.queue = queue
     this.batchSize = opts.batchSize || 10
-    this.visibilityTimeout = opts.visibilityTimeout || parseInt(queue.opts.visibilityTimeout) || 30
+    this.visibilityTimeout = opts.visibilityTimeout || 30
     this.batchHandle = !!opts.batchHandle
     this.running = false
     this.handler = handler
@@ -46,50 +45,55 @@ class Consumer<T = any> extends EventEmitter {
   _pull(): void {
     if (this.running) {
       debug('Polling for messages')
-      this.queue.sqs.receiveMessage(
-        {
-          QueueUrl: this.queue.queueUrl,
+      this.queue.client
+        .receiveMessageBatch({
+          Locator: this.queue.locator,
           MaxNumberOfMessages: this.batchSize,
           WaitTimeSeconds: 20, // max time long polling
           VisibilityTimeout: this.visibilityTimeout,
-        },
-        (err, data) => {
-          this._handleSqsResponse(err, data)
-        },
-      )
-    }
-  }
-
-  /**
-   * Handler response which contains a batch of messages, dispatch then to consumer handler.
-   */
-  _handleSqsResponse(err: Error, response: SQS.ReceiveMessageResult): void {
-    if (err) {
-      err.message = `Error receiving sqs message: ${err.message}`
-      this.emit('error', err)
-    }
-    debug('Response received', response)
-    if (response && response.Messages && response.Messages.length) {
-      debug('Handle messages', response.Messages.length)
-      this.processingMessagesPromise = this._processMessage(response.Messages)
-      this.processingMessagesPromise
-        .then(() => {
-          this._pull()
         })
-        .catch((err2: Error) => {
-          err2.message = `Consumer[${this.queue.name}] processingMessages error: ${err2.message}`
-          this.emit('error', err2)
-          this._pull()
+        .then(data => {
+          debug('Response received', data)
+          if (data && data.Messages && data.Messages.length) {
+            debug('Handle messages', data.Messages.length)
+            this.processingMessagesPromise = this._processMessage(data.Messages)
+            this.processingMessagesPromise
+              .then(() => {
+                this._pull()
+              })
+              .catch((err2: Error) => {
+                err2.message = `Consumer[${this.queue.name}] processingMessages error: ${
+                  err2.message
+                }`
+                this.emit('error', err2)
+                this._pull()
+              })
+          } else {
+            this._pull()
+          }
         })
-    } else {
-      this._pull()
+        .catch(err => {
+          if (err.name === 'MessageNotExist') {
+            this._pull()
+          } else {
+            err.message = `Error receiving sqs message: ${err.message}`
+            this.emit('error', err)
+          }
+        })
     }
   }
 
   /**
    * Call consumer handler, this function never reject, to make the polling loop running forever.
    */
-  async _processMessage(messages: SQS.MessageList): Promise<void> {
+  async _processMessage(
+    messages: {
+      MessageId?: string
+      ReceiptHandle?: string
+      MD5OfBody?: string
+      Body?: string
+    }[],
+  ): Promise<void> {
     debug('Processing message, %o', messages)
     const decodedMessages = messages.map(message => message.Body && JSON.parse(message.Body))
 
@@ -131,34 +135,38 @@ class Consumer<T = any> extends EventEmitter {
   /**
    * Delete message from queue if it's handled correctly.
    */
-  async _deleteMessage(message: SQS.Message): Promise<void> {
+  async _deleteMessage(message: {
+    MessageId?: string
+    ReceiptHandle?: string
+    MD5OfBody?: string
+    Body?: string
+  }): Promise<void> {
     const deleteParams = {
-      QueueUrl: this.queue.queueUrl,
+      Locator: this.queue.locator,
       ReceiptHandle: message.ReceiptHandle!,
     }
 
     debug('Deleting message ', message.MessageId)
-    return new Promise<void>((resolve, reject) => {
-      this.queue.sqs.deleteMessage(deleteParams, err => {
-        err ? reject(err) : resolve()
-      })
-    })
+    return this.queue.client.deleteMessage(deleteParams)
   }
 
-  async _deleteMessageBatch(messages: SQS.MessageList): Promise<void> {
+  async _deleteMessageBatch(
+    messages: {
+      MessageId?: string
+      ReceiptHandle?: string
+      MD5OfBody?: string
+      Body?: string
+    }[],
+  ): Promise<void> {
     const params = {
-      QueueUrl: this.queue.queueUrl,
+      Locator: this.queue.locator,
       Entries: messages.map((message, i) => ({
         Id: i.toString(),
         ReceiptHandle: message.ReceiptHandle!,
       })),
     }
 
-    return new Promise<void>((resolve, reject) => {
-      this.queue.sqs.deleteMessageBatch(params, err => {
-        err ? reject(err) : resolve()
-      })
-    })
+    return this.queue.client.deleteMessageBatch(params)
   }
 
   /**

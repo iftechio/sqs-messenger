@@ -1,16 +1,14 @@
 import * as Bluebird from 'bluebird'
-import { SQS, SNS } from 'aws-sdk'
 
+import { Client } from './client'
 import Queue from './queue'
 import Topic from './topic'
 
 class Producer {
-  sqs: SQS
-  sns: SNS
+  client: Client
 
-  constructor({ sqs, sns }: { sqs: SQS; sns: SNS }) {
-    this.sqs = sqs
-    this.sns = sns
+  constructor(client: Client) {
+    this.client = client
   }
 
   /**
@@ -19,7 +17,7 @@ class Producer {
   async sendTopic<T extends object = any>(
     topic: Topic,
     message: T,
-  ): Promise<SNS.Types.PublishResponse> {
+  ): Promise<{ MessageId?: string }> {
     const metaAttachedMessage = {
       _meta: { topicName: topic.name },
       ...(message as object),
@@ -34,16 +32,9 @@ class Producer {
     })
       .timeout(2000, `topic ${topic.name} is not ready within 2000ms`)
       .then(() => {
-        return new Promise((resolve, reject) => {
-          this.sns.publish(
-            {
-              TopicArn: topic.arn,
-              Message: encodedMessage,
-            },
-            (err, result) => {
-              err ? reject(err) : resolve(result)
-            },
-          )
+        return this.client.publish({
+          Locator: topic.Locator,
+          Message: encodedMessage,
         })
       })
   }
@@ -54,8 +45,11 @@ class Producer {
   async sendQueue<T extends object = any>(
     queue: Queue,
     message: T,
-    opts?: { DelaySeconds?: number },
-  ): Promise<SQS.Types.SendMessageResult> {
+    opts?: { DelaySeconds?: number; Priority?: number },
+  ): Promise<{
+    MessageId?: string
+    MD5OfMessageBody?: string
+  }> {
     const metaAttachedMessage = { _meta: {}, ...(message as object) }
     const encodedMessage = JSON.stringify(metaAttachedMessage)
     return new Bluebird(resolve => {
@@ -67,17 +61,10 @@ class Producer {
     })
       .timeout(2000, `queue ${queue.name} is not ready within 2000ms`)
       .then(() => {
-        return new Promise((resolve, reject) => {
-          this.sqs.sendMessage(
-            {
-              ...opts,
-              QueueUrl: queue.queueUrl,
-              MessageBody: encodedMessage,
-            },
-            (err, result) => {
-              err ? reject(err) : resolve(result)
-            },
-          )
+        return this.client.sendMessage({
+          ...opts,
+          Locator: queue.locator,
+          MessageBody: encodedMessage,
         })
       })
   }
