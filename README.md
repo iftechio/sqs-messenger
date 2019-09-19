@@ -3,7 +3,7 @@ sqs-messenger
 
 This library makes message sending/receiving in SQS/SNS easy.
 
-Now also support Aliyun MNS.
+Also support Aliyun MNS.
 
 ## Simple usage
 ```javascript
