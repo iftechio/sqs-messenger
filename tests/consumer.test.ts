@@ -52,8 +52,8 @@ test.cb.serial('should delete message on done', t => {
 
   c2.onMessage((message, done) => {
     t.deepEqual(message, { text: 'hahaha' })
-    done()
     setTimeout(() => {
+      done()
       mock.verify()
       t.end()
     }, 200)

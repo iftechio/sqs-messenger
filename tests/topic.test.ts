@@ -61,6 +61,7 @@ test.serial('should bind queue', t => {
       Protocol: 'sqs',
       TopicLocator: 'arn:aws-cn:sns:cn-north-1:abc:test_t1',
       Endpoint: 'arn:sqs:test:test_tq',
+      QueueLocator: undefined,
     })
     t.deepEqual(setAttrStub.firstCall.args[0], {
       SubscribeLocator: 'arn:subscription',
