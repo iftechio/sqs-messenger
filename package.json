@@ -21,13 +21,13 @@
   },
   "peerDependencies": {
     "aws-sdk": "^2.244.1",
-    "@ruguoapp/mns-node-sdk": "1.0.2"
+    "@ruguoapp/mns-node-sdk": "1.1.0"
   },
   "devDependencies": {
     "@types/sinon": "4.3.3",
     "ava": "^0.25.0",
     "aws-sdk": "2.244.1",
-    "@ruguoapp/mns-node-sdk": "1.0.2",
+    "@ruguoapp/mns-node-sdk": "1.1.0",
     "sinon": "5.0.7",
     "source-map-support": "0.5.6",
     "tslint": "^5.18.0",
