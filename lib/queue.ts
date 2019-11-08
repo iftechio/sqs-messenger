@@ -136,9 +136,7 @@ class Queue extends EventEmitter {
         this.deadLetterQueue = deadLetterQueue
 
         // set redrive policy on origin queue
-        createParams.Attributes!.RedrivePolicy = `{"maxReceiveCount":"${
-          opts.maxReceiveCount
-        }", "deadLetterTargetArn":"${this.config.sqsArnPrefix}${deadLetterQueue.realName}"}`
+        createParams.Attributes!.RedrivePolicy = `{"maxReceiveCount":"${opts.maxReceiveCount}", "deadLetterTargetArn":"${this.config.sqsArnPrefix}${deadLetterQueue.realName}"}`
 
         deadLetterQueue.on('ready', () => {
           resolve()

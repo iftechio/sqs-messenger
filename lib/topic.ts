@@ -53,9 +53,7 @@ class Topic extends EventEmitter {
         })
         .then(data2 => {
           debug(
-            `Succeed subscribing ${queue.name}(${queue.realName}) to ${this.name}(${
-              this.realName
-            })`,
+            `Succeed subscribing ${queue.name}(${queue.realName}) to ${this.name}(${this.realName})`,
           )
           resolve(data2)
         })

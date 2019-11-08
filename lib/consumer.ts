@@ -62,9 +62,7 @@ class Consumer<T = any> extends EventEmitter {
                 this._pull()
               })
               .catch((err2: Error) => {
-                err2.message = `Consumer[${this.queue.name}] processingMessages error: ${
-                  err2.message
-                }`
+                err2.message = `Consumer[${this.queue.name}] processingMessages error: ${err2.message}`
                 this.emit('error', err2)
                 this._pull()
               })
@@ -101,6 +99,7 @@ class Consumer<T = any> extends EventEmitter {
       ? new Bluebird<void>((resolve, reject) => {
           this.handler(decodedMessages, err => {
             if (err) {
+              console.log('decodedMessages', decodedMessages)
               reject(err)
             } else {
               resolve(this._deleteMessageBatch(messages))
