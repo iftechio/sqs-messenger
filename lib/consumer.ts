@@ -107,7 +107,9 @@ class Consumer<T = any> extends EventEmitter {
             }),
             this._deleteMessage(message),
           ])
+          return
         }
+
         try {
           return message.Body && JSON.parse(message.Body)
         } catch (err) {
@@ -123,25 +125,25 @@ class Consumer<T = any> extends EventEmitter {
 
     return (this.batchHandle
       ? new Bluebird<void>((resolve, reject) => {
-          this.handler(decodedMessages, err => {
+        this.handler(decodedMessages, err => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(this._deleteMessageBatch(messages))
+          }
+        })
+      })
+      : Bluebird.map(decodedMessages, (decodedMessage, i) => {
+        return new Promise((resolve, reject) => {
+          this.handler(decodedMessage, err => {
             if (err) {
               reject(err)
             } else {
-              resolve(this._deleteMessageBatch(messages))
+              resolve(this._deleteMessage(messages[i]))
             }
           })
         })
-      : Bluebird.map(decodedMessages, (decodedMessage, i) => {
-          return new Promise((resolve, reject) => {
-            this.handler(decodedMessage, err => {
-              if (err) {
-                reject(err)
-              } else {
-                resolve(this._deleteMessage(messages[i]))
-              }
-            })
-          })
-        })
+      })
     )
       .timeout(this.visibilityTimeout * 1000)
       .catch((err: Error) => {
