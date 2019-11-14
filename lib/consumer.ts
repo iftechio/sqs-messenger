@@ -99,13 +99,7 @@ class Consumer<T = any> extends EventEmitter {
     debug('Processing message, %o', messages)
     const decodedMessages = _.compact(
       await Bluebird.map(messages, async message => {
-        try {
-          if (message.DequeueCount && parseInt(message.DequeueCount) > MAX_DEQUEUE_COUNT) {
-            throw new Error('message dequeue count overflow')
-          }
-          return message.Body && JSON.parse(message.Body)
-        } catch (err) {
-          console.error('[mns-messenger] preprocess message %j error: %s', message.Body, err.stack)
+        if (message.DequeueCount && parseInt(message.DequeueCount) > MAX_DEQUEUE_COUNT) {
           await Promise.all([
             this.queue.client.sendMessage({
               Locator: `${this.queue.realName}-dl`,
@@ -113,6 +107,16 @@ class Consumer<T = any> extends EventEmitter {
             }),
             this._deleteMessage(message),
           ])
+        }
+        try {
+          return message.Body && JSON.parse(message.Body)
+        } catch (err) {
+          console.error(
+            'Consumer[%s] parse message %j error: %s',
+            this.queue.name,
+            message.Body,
+            err.stack,
+          )
         }
       }),
     )
