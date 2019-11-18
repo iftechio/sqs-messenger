@@ -100,13 +100,11 @@ class Consumer<T = any> extends EventEmitter {
     const decodedMessages = _.compact(
       await Bluebird.map(messages, async message => {
         if (message.DequeueCount && parseInt(message.DequeueCount) > MAX_DEQUEUE_COUNT) {
-          await Promise.all([
-            this.queue.client.sendMessage({
-              Locator: `${this.queue.realName}-dl`,
-              MessageBody: message.Body || '',
-            }),
-            this._deleteMessage(message),
-          ])
+          await this._deleteMessage(message)
+          await this.queue.client.sendMessage({
+            Locator: `${this.queue.realName}-dl`,
+            MessageBody: message.Body || '',
+          })
           return
         }
 
@@ -125,25 +123,25 @@ class Consumer<T = any> extends EventEmitter {
 
     return (this.batchHandle
       ? new Bluebird<void>((resolve, reject) => {
-          this.handler(decodedMessages, err => {
+        this.handler(decodedMessages, err => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(this._deleteMessageBatch(messages))
+          }
+        })
+      })
+      : Bluebird.map(decodedMessages, (decodedMessage, i) => {
+        return new Promise((resolve, reject) => {
+          this.handler(decodedMessage, err => {
             if (err) {
               reject(err)
             } else {
-              resolve(this._deleteMessageBatch(messages))
+              resolve(this._deleteMessage(messages[i]))
             }
           })
         })
-      : Bluebird.map(decodedMessages, (decodedMessage, i) => {
-          return new Promise((resolve, reject) => {
-            this.handler(decodedMessage, err => {
-              if (err) {
-                reject(err)
-              } else {
-                resolve(this._deleteMessage(messages[i]))
-              }
-            })
-          })
-        })
+      })
     )
       .timeout(this.visibilityTimeout * 1000)
       .catch((err: Error) => {
