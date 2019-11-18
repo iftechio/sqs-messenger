@@ -1,3 +1,4 @@
+import * as _ from 'lodash'
 import * as Debug from 'debug'
 import * as Bluebird from 'bluebird'
 import { EventEmitter } from 'events'
@@ -5,6 +6,8 @@ import { EventEmitter } from 'events'
 import Queue from './queue'
 
 const debug = Debug('sqs-messenger:consumer')
+
+const MAX_DEQUEUE_COUNT = 5
 
 class Consumer<T = any> extends EventEmitter {
   queue: Queue
@@ -62,9 +65,7 @@ class Consumer<T = any> extends EventEmitter {
                 this._pull()
               })
               .catch((err2: Error) => {
-                err2.message = `Consumer[${this.queue.name}] processingMessages error: ${
-                  err2.message
-                }`
+                err2.message = `Consumer[${this.queue.name}] processingMessages error: ${err2.message}`
                 this.emit('error', err2)
                 this._pull()
               })
@@ -92,10 +93,33 @@ class Consumer<T = any> extends EventEmitter {
       ReceiptHandle?: string
       MD5OfBody?: string
       Body?: string
+      DequeueCount?: string
     }[],
   ): Promise<void> {
     debug('Processing message, %o', messages)
-    const decodedMessages = messages.map(message => message.Body && JSON.parse(message.Body))
+    const decodedMessages = _.compact(
+      await Bluebird.map(messages, async message => {
+        if (message.DequeueCount && parseInt(message.DequeueCount) > MAX_DEQUEUE_COUNT) {
+          await this._deleteMessage(message)
+          await this.queue.client.sendMessage({
+            Locator: `${this.queue.realName}-dl`,
+            MessageBody: message.Body || '',
+          })
+          return
+        }
+
+        try {
+          return message.Body && JSON.parse(message.Body)
+        } catch (err) {
+          console.error(
+            'Consumer[%s] parse message %j error: %s',
+            this.queue.name,
+            message.Body,
+            err.stack,
+          )
+        }
+      }),
+    )
 
     return (this.batchHandle
       ? new Bluebird<void>((resolve, reject) => {

@@ -46,6 +46,7 @@ export interface Client {
       ReceiptHandle?: string
       MD5OfBody?: string
       Body?: string
+      DequeueCount?: string
     }[]
   }>
 
@@ -357,6 +358,7 @@ export class MnsClient implements Client {
         ReceiptHandle: message.ReceiptHandle,
         MD5OfBody: message.MessageBodyMD5,
         Body: message.MessageBody,
+        DequeueCount: message.DequeueCount,
       })),
     }
   }
