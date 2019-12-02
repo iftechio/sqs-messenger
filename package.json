@@ -22,10 +22,10 @@
   },
   "peerDependencies": {
     "aws-sdk": "^2.244.1",
-    "@ruguoapp/mns-node-sdk": "1.2.0"
+    "@ruguoapp/mns-node-sdk": "1.2.1"
   },
   "devDependencies": {
-    "@ruguoapp/mns-node-sdk": "1.2.0",
+    "@ruguoapp/mns-node-sdk": "1.2.1",
     "@types/lodash": "4.14.146",
     "@types/sinon": "4.3.3",
     "ava": "^0.25.0",
