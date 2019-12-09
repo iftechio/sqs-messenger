@@ -64,22 +64,21 @@ class Consumer<T = any> extends EventEmitter {
               .then(() => {
                 this._pull()
               })
-              .catch((err2: Error) => {
-                err2.message = `Consumer[${this.queue.name}] processingMessages error: ${err2.message}`
-                this.emit('error', err2)
+              .catch((processMessageErr: Error) => {
+                processMessageErr.message = `Consumer[${this.queue.name}] processingMessages error: ${processMessageErr.message}`
+                this.emit('error', processMessageErr)
                 this._pull()
               })
           } else {
             this._pull()
           }
         })
-        .catch(err => {
-          if (err.name === 'MessageNotExist') {
-            this._pull()
-          } else {
-            err.message = `Error receiving sqs message: ${err.message}`
-            this.emit('error', err)
+        .catch(receiveMessageErr => {
+          if (receiveMessageErr.name !== 'MessageNotExist') {
+            receiveMessageErr.message = `Error receiving sqs message: ${receiveMessageErr.message}`
+            this.emit('error', receiveMessageErr)
           }
+          this._pull()
         })
     }
   }
