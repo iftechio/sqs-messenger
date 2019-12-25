@@ -190,7 +190,6 @@ export class SqsClient implements Client {
       Id: string
       MessageBody: string
       DelaySeconds?: number
-      Priority?: number
     }[]
   }) {
     const sendMessageParams: SQS.SendMessageBatchRequest = {
@@ -376,6 +375,7 @@ export class MnsClient implements Client {
   async sendMessageBatch(params: {
     Locator: string
     Entries: {
+      Id: string
       MessageBody: string
       DelaySeconds?: number
       Priority?: number
@@ -383,7 +383,11 @@ export class MnsClient implements Client {
   }) {
     const sendMessageParams: MNS.Types.BatchSendMessageRequest = {
       QueueName: params.Locator,
-      Entries: params.Entries,
+      Entries: params.Entries.map(entry => ({
+        MessageBody: entry.MessageBody,
+        DelaySeconds: entry.DelaySeconds,
+        Priority: entry.Priority,
+      })),
     }
     await this.mns.batchSendMessage(sendMessageParams)
   }
