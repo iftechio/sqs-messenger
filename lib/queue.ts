@@ -58,7 +58,7 @@ class Queue extends EventEmitter {
       delaySeconds: opts.delaySeconds || 0,
       messageRetentionPeriod: opts.messageRetentionPeriod || 345600,
       pollingWaitSeconds: opts.pollingWaitSeconds || 0,
-      loggingEnabled: typeof opts.loggingEnabled === 'boolean' ? opts.loggingEnabled : false,
+      loggingEnabled: opts.loggingEnabled || true,
     }
     this.name = name
     this.realName = config.resourceNamePrefix + name

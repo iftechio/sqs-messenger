@@ -22,15 +22,34 @@ class Topic extends EventEmitter {
     this.isReady = false
 
     debug(`Create topic ${this.name}`)
-    this.client
-      .createTopic({ TopicName: this.realName })
+    this._createTopic()
       .then(data => {
         debug('topic created %j', data)
         this.Locator = data.Locator || ''
         this.isReady = true
         this.emit('ready')
       })
-      .catch(err => this.emit('error', err))
+      .catch(err => {
+        this.emit('error', err)
+      })
+  }
+
+  async _createTopic() {
+    return new Promise<{ Locator?: string }>((resolve, reject) => {
+      const createParams = { TopicName: this.realName }
+      this.client
+        .createTopic(createParams)
+        .then(data => resolve(data))
+        .catch(err => {
+          // MNS Error
+          if (err.name === 'TopicAlreadyExist') {
+            console.warn(`Topic [${this.realName}] already exists`, err.stack)
+            resolve({ Locator: createParams.TopicName })
+            return
+          }
+          reject(err)
+        })
+    })
   }
 
   /**

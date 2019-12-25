@@ -336,16 +336,14 @@ export class MnsClient implements Client {
   }) {
     const createQueueRequest: MNS.Types.CreateQueueRequest = {
       QueueName: params.QueueName,
-    }
-    if (params.Attributes) {
-      createQueueRequest.Attributes = {
-        MaximumMessageSize: params.Attributes!.MaximumMessageSize,
-        VisibilityTimeout: params.Attributes!.VisibilityTimeout,
-        DelaySeconds: params.Attributes!.DelaySeconds,
-        MessageRetentionPeriod: params.Attributes!.MessageRetentionPeriod,
-        PollingWaitSeconds: params.Attributes!.PollingWaitSeconds,
-        LoggingEnabled: params.Attributes!.LoggingEnabled,
-      }
+      Attributes: {
+        MaximumMessageSize: params.Attributes && params.Attributes.MaximumMessageSize,
+        VisibilityTimeout: params.Attributes && params.Attributes.VisibilityTimeout,
+        DelaySeconds: params.Attributes && params.Attributes.DelaySeconds,
+        MessageRetentionPeriod: params.Attributes && params.Attributes.MessageRetentionPeriod,
+        PollingWaitSeconds: params.Attributes && params.Attributes.PollingWaitSeconds,
+        LoggingEnabled: (params.Attributes && params.Attributes.LoggingEnabled) || true,
+      },
     }
     await this.mns.createQueue(createQueueRequest)
     return { Locator: params.QueueName }
@@ -439,7 +437,14 @@ export class MnsClient implements Client {
   }
 
   async createTopic(params: MNS.Types.CreateTopicRequest) {
-    await this.mns.createTopic(params)
+    const createTopicRequest: MNS.Types.CreateTopicRequest = {
+      TopicName: params.TopicName,
+      Attributes: {
+        MaximumMessageSize: params.Attributes && params.Attributes.MaximumMessageSize,
+        LoggingEnabled: (params.Attributes && params.Attributes.LoggingEnabled) || true,
+      },
+    }
+    await this.mns.createTopic(createTopicRequest)
     return { Locator: params.TopicName }
   }
 
