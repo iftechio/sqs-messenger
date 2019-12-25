@@ -33,6 +33,19 @@ export interface Client {
   }>
 
   /**
+   * Send a batch of messages.
+   */
+  sendMessageBatch(params: {
+    Locator: string
+    Entries: {
+      Id: string
+      MessageBody: string
+      DelaySeconds?: number
+      Priority?: number
+    }[]
+  }): Promise<void>
+
+  /**
    * Receive a batch of messages.
    */
   receiveMessageBatch(params: {
@@ -167,6 +180,26 @@ export class SqsClient implements Client {
     return new Promise<SQS.SendMessageResult>((resolve, reject) => {
       this.sqs.sendMessage(sendMessageParams, (err, data) => {
         err ? reject(err) : resolve(data)
+      })
+    })
+  }
+
+  async sendMessageBatch(params: {
+    Locator: string
+    Entries: {
+      Id: string
+      MessageBody: string
+      DelaySeconds?: number
+      Priority?: number
+    }[]
+  }) {
+    const sendMessageParams: SQS.SendMessageBatchRequest = {
+      QueueUrl: params.Locator,
+      Entries: params.Entries,
+    }
+    return new Promise<void>((resolve, reject) => {
+      this.sqs.sendMessageBatch(sendMessageParams, err => {
+        err ? reject(err) : resolve()
       })
     })
   }
@@ -338,6 +371,21 @@ export class MnsClient implements Client {
       MessageId: data.MessageId,
       MD5OfMessageBody: data.MessageBodyMD5,
     }
+  }
+
+  async sendMessageBatch(params: {
+    Locator: string
+    Entries: {
+      MessageBody: string
+      DelaySeconds?: number
+      Priority?: number
+    }[]
+  }) {
+    const sendMessageParams: MNS.Types.BatchSendMessageRequest = {
+      QueueName: params.Locator,
+      Entries: params.Entries,
+    }
+    await this.mns.batchSendMessage(sendMessageParams)
   }
 
   async receiveMessageBatch(params: {

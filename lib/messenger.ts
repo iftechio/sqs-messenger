@@ -122,6 +122,20 @@ class Messenger {
     return this.producer.sendQueue<T>(queue, msg, opts)
   }
 
+  async sendQueueMessageBatch<T extends object = any>(
+    key: string,
+    entries: {
+      message: T
+      opts?: { DelaySeconds?: number; Priority?: number }
+    }[],
+  ): Promise<void> {
+    const queue = this.queueMap[key]
+    if (!queue) {
+      throw new Error(`Queue[${key}] not found`)
+    }
+    return this.producer.sendQueueBatch<T>(queue, entries)
+  }
+
   /**
    * Create a topic with specific name, will declare the SNS topic if not exists
    */
