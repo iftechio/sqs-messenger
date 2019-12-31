@@ -14,7 +14,7 @@
     "prepublishOnly": "npm run compile"
   },
   "dependencies": {
-    "bluebird": "3.5.1",
+    "bluebird": "3.7.2",
     "lodash": "4.17.15",
     "debug": "3.1.0"
   },
@@ -23,8 +23,8 @@
     "mns-node-sdk": "1.0.2"
   },
   "devDependencies": {
-    "@types/bluebird": "3.5.20",
-    "@types/node": "8.5.1",
+    "@types/bluebird": "3.5.29",
+    "@types/node": "12.12.6",
     "@types/lodash": "4.14.146",
     "@types/sinon": "4.3.3",
     "ava": "^0.25.0",
@@ -34,7 +34,7 @@
     "tslint-config-prettier": "1.13.0",
     "tslint-jike-node": "0.0.14",
     "prettier": "^1.18.2",
-    "typescript": "2.8.3"
+    "typescript": "3.7.4"
   },
   "author": "",
   "license": "ISC",
