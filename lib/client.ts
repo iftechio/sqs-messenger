@@ -1,5 +1,5 @@
 import { SQS, SNS } from 'aws-sdk'
-import * as MNS from '@ruguoapp/mns-node-sdk'
+import * as MNS from 'mns-node-sdk'
 
 export interface Client {
   /**

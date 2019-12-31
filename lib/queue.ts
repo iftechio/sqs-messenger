@@ -152,14 +152,14 @@ class Queue extends EventEmitter {
         .catch(err => {
           // SQS Error
           if (err.name === 'QueueAlreadyExists') {
-            console.warn(`Queue [${this.realName}] already exists`, err.stack)
+            console.warn(`Queue [${this.realName}] already exists`)
             // ignore QueueAlreadyExists error
             resolve({ Locator: this.config.queueUrlPrefix + createParams.QueueName })
             return
           }
           // MNS Error
           if (err.name === 'QueueAlreadyExist') {
-            console.warn(`Queue [${this.realName}] already exists`, err.stack)
+            console.warn(`Queue [${this.realName}] already exists`)
             // ignore MNSQueueAlreadyExistErr error
             resolve({ Locator: createParams.QueueName })
             return

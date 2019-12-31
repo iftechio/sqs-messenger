@@ -43,7 +43,7 @@ class Topic extends EventEmitter {
         .catch(err => {
           // MNS Error
           if (err.name === 'TopicAlreadyExist') {
-            console.warn(`Topic [${this.realName}] already exists`, err.stack)
+            console.warn(`Topic [${this.realName}] already exists`)
             resolve({ Locator: createParams.TopicName })
             return
           }
