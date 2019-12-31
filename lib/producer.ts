@@ -68,6 +68,41 @@ class Producer {
         })
       })
   }
+
+  /**
+   * Send a batch of messages to queue
+   */
+  async sendQueueBatch<T extends object = any>(
+    queue: Queue,
+    entries: {
+      message: T
+      opts?: { DelaySeconds?: number; Priority?: number }
+    }[],
+  ): Promise<void> {
+    const Entries = entries.map((entry, i) => {
+      const metaAttachedMessage = { _meta: {}, ...(entry.message as object) }
+      const encodedMessage = JSON.stringify(metaAttachedMessage)
+      return {
+        Id: i.toString(),
+        MessageBody: encodedMessage,
+        ...entry.opts,
+      }
+    })
+    return new Bluebird(resolve => {
+      if (queue.isReady) {
+        resolve()
+      } else {
+        queue.on('ready', () => resolve())
+      }
+    })
+      .timeout(2000, `queue ${queue.name} is not ready within 2000ms`)
+      .then(() => {
+        return this.client.sendMessageBatch({
+          Locator: queue.locator,
+          Entries,
+        })
+      })
+  }
 }
 
 export default Producer

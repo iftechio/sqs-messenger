@@ -1,6 +1,6 @@
 {
   "name": "@ruguoapp/sqs-messenger",
-  "version": "3.3.0",
+  "version": "3.4.1",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,22 +14,20 @@
     "prepublishOnly": "npm run compile"
   },
   "dependencies": {
-    "@types/bluebird": "3.5.20",
-    "@types/node": "8.5.1",
     "bluebird": "3.5.1",
     "lodash": "4.17.15",
     "debug": "3.1.0"
   },
-  "peerDependencies": {
+  "optionalDependencies": {
     "aws-sdk": "^2.244.1",
-    "@ruguoapp/mns-node-sdk": "1.2.1"
+    "mns-node-sdk": "1.0.2"
   },
   "devDependencies": {
-    "@ruguoapp/mns-node-sdk": "1.2.1",
+    "@types/bluebird": "3.5.20",
+    "@types/node": "8.5.1",
     "@types/lodash": "4.14.146",
     "@types/sinon": "4.3.3",
     "ava": "^0.25.0",
-    "aws-sdk": "2.244.1",
     "sinon": "5.0.7",
     "source-map-support": "0.5.6",
     "tslint": "^5.18.0",

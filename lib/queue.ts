@@ -58,7 +58,7 @@ class Queue extends EventEmitter {
       delaySeconds: opts.delaySeconds || 0,
       messageRetentionPeriod: opts.messageRetentionPeriod || 345600,
       pollingWaitSeconds: opts.pollingWaitSeconds || 0,
-      loggingEnabled: typeof opts.loggingEnabled === 'boolean' ? opts.loggingEnabled : false,
+      loggingEnabled: opts.loggingEnabled || true,
     }
     this.name = name
     this.realName = config.resourceNamePrefix + name
@@ -152,14 +152,14 @@ class Queue extends EventEmitter {
         .catch(err => {
           // SQS Error
           if (err.name === 'QueueAlreadyExists') {
-            console.warn(`Queue [${this.realName}] already exists`, err.stack)
+            console.warn(`Queue [${this.realName}] already exists`)
             // ignore QueueAlreadyExists error
             resolve({ Locator: this.config.queueUrlPrefix + createParams.QueueName })
             return
           }
           // MNS Error
           if (err.name === 'QueueAlreadyExist') {
-            console.warn(`Queue [${this.realName}] already exists`, err.stack)
+            console.warn(`Queue [${this.realName}] already exists`)
             // ignore MNSQueueAlreadyExistErr error
             resolve({ Locator: createParams.QueueName })
             return

@@ -1,5 +1,5 @@
 import { SQS, SNS } from 'aws-sdk'
-import * as MNS from '@ruguoapp/mns-node-sdk'
+import * as MNS from 'mns-node-sdk'
 
 export interface Client {
   /**
@@ -31,6 +31,19 @@ export interface Client {
     MessageId?: string
     MD5OfMessageBody?: string
   }>
+
+  /**
+   * Send a batch of messages.
+   */
+  sendMessageBatch(params: {
+    Locator: string
+    Entries: {
+      Id: string
+      MessageBody: string
+      DelaySeconds?: number
+      Priority?: number
+    }[]
+  }): Promise<void>
 
   /**
    * Receive a batch of messages.
@@ -171,6 +184,25 @@ export class SqsClient implements Client {
     })
   }
 
+  async sendMessageBatch(params: {
+    Locator: string
+    Entries: {
+      Id: string
+      MessageBody: string
+      DelaySeconds?: number
+    }[]
+  }) {
+    const sendMessageParams: SQS.SendMessageBatchRequest = {
+      QueueUrl: params.Locator,
+      Entries: params.Entries,
+    }
+    return new Promise<void>((resolve, reject) => {
+      this.sqs.sendMessageBatch(sendMessageParams, err => {
+        err ? reject(err) : resolve()
+      })
+    })
+  }
+
   async receiveMessageBatch(params: {
     Locator: string
     MaxNumberOfMessages: number
@@ -304,16 +336,14 @@ export class MnsClient implements Client {
   }) {
     const createQueueRequest: MNS.Types.CreateQueueRequest = {
       QueueName: params.QueueName,
-    }
-    if (params.Attributes) {
-      createQueueRequest.Attributes = {
-        MaximumMessageSize: params.Attributes!.MaximumMessageSize,
-        VisibilityTimeout: params.Attributes!.VisibilityTimeout,
-        DelaySeconds: params.Attributes!.DelaySeconds,
-        MessageRetentionPeriod: params.Attributes!.MessageRetentionPeriod,
-        PollingWaitSeconds: params.Attributes!.PollingWaitSeconds,
-        LoggingEnabled: params.Attributes!.LoggingEnabled,
-      }
+      Attributes: {
+        MaximumMessageSize: params.Attributes?.MaximumMessageSize,
+        VisibilityTimeout: params.Attributes?.VisibilityTimeout,
+        DelaySeconds: params.Attributes?.DelaySeconds,
+        MessageRetentionPeriod: params.Attributes?.MessageRetentionPeriod,
+        PollingWaitSeconds: params.Attributes?.PollingWaitSeconds,
+        LoggingEnabled: params.Attributes?.LoggingEnabled || true,
+      },
     }
     await this.mns.createQueue(createQueueRequest)
     return { Locator: params.QueueName }
@@ -338,6 +368,26 @@ export class MnsClient implements Client {
       MessageId: data.MessageId,
       MD5OfMessageBody: data.MessageBodyMD5,
     }
+  }
+
+  async sendMessageBatch(params: {
+    Locator: string
+    Entries: {
+      Id: string
+      MessageBody: string
+      DelaySeconds?: number
+      Priority?: number
+    }[]
+  }) {
+    const sendMessageParams: MNS.Types.BatchSendMessageRequest = {
+      QueueName: params.Locator,
+      Entries: params.Entries.map(entry => ({
+        MessageBody: entry.MessageBody,
+        DelaySeconds: entry.DelaySeconds,
+        Priority: entry.Priority,
+      })),
+    }
+    await this.mns.batchSendMessage(sendMessageParams)
   }
 
   async receiveMessageBatch(params: {
@@ -387,7 +437,14 @@ export class MnsClient implements Client {
   }
 
   async createTopic(params: MNS.Types.CreateTopicRequest) {
-    await this.mns.createTopic(params)
+    const createTopicRequest: MNS.Types.CreateTopicRequest = {
+      TopicName: params.TopicName,
+      Attributes: {
+        MaximumMessageSize: params.Attributes?.MaximumMessageSize,
+        LoggingEnabled: params.Attributes?.LoggingEnabled || true,
+      },
+    }
+    await this.mns.createTopic(createTopicRequest)
     return { Locator: params.TopicName }
   }
 
