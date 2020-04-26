@@ -1,3 +1,4 @@
+import * as Bluebird from 'bluebird'
 import { SQS, SNS } from 'aws-sdk'
 import * as MNS from 'mns-node-sdk'
 import * as amqplib from 'amqplib'
@@ -500,10 +501,7 @@ export class AmqpClient implements Client {
   async sendMessageBatch(params: {
     Locator: string
     Entries: {
-      Id: string
       MessageBody: string
-      DelaySeconds?: number
-      Priority?: number
     }[]
   }) {
     await Bluebird.map(
@@ -513,12 +511,7 @@ export class AmqpClient implements Client {
     )
   }
 
-  async receiveMessageBatch(params: {
-    Locator: string
-    MaxNumberOfMessages: number
-    WaitTimeSeconds: number
-    VisibilityTimeout: number
-  }) {
+  async receiveMessageBatch(params: { Locator: string }) {
     const data = await this.channel.get(params.Locator)
 
     return {
@@ -534,14 +527,12 @@ export class AmqpClient implements Client {
     }
   }
 
-  async deleteMessage(params: { Locator: string; ReceiptHandle: string }) {
+  async deleteMessage(params: { ReceiptHandle: string }) {
     return this.channel.ack(JSON.parse(params.ReceiptHandle))
   }
 
   async deleteMessageBatch(params: {
-    Locator: string
     Entries: {
-      Id: string
       ReceiptHandle: string
     }[]
   }) {
@@ -550,7 +541,7 @@ export class AmqpClient implements Client {
     })
   }
 
-  async createTopic(params: MNS.Types.CreateTopicRequest) {
+  async createTopic(params: { TopicName: string }) {
     await this.channel.assertExchange(params.TopicName, 'fanout')
     return { Locator: params.TopicName }
   }
