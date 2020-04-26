@@ -1,6 +1,6 @@
 {
   "name": "@ruguoapp/sqs-messenger",
-  "version": "3.4.2",
+  "version": "4.0.0",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,9 +20,11 @@
   },
   "optionalDependencies": {
     "aws-sdk": "^2.244.1",
-    "mns-node-sdk": "1.0.3"
+    "mns-node-sdk": "1.0.3",
+    "amqplib": "0.5.5"
   },
   "devDependencies": {
+    "@types/amqplib": "0.5.13",
     "@types/bluebird": "3.5.29",
     "@types/node": "12.12.6",
     "@types/lodash": "4.14.146",
@@ -39,6 +41,6 @@
   "author": "",
   "license": "ISC",
   "publishConfig": {
-    "registry": "http://npmjs.ruguoapp.com"
+    "registry": "http://npmjs.midway.run"
   }
 }

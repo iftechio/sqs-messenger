@@ -123,27 +123,26 @@ class Consumer<T = any> extends EventEmitter {
     try {
       await (this.batchHandle
         ? new Bluebird<void>((resolve, reject) => {
-          this.handler(decodedMessages, err => {
-            if (err) {
-              reject(err)
-            } else {
-              resolve(this._deleteMessageBatch(messages))
-            }
-          })
-        })
-        : Bluebird.map(decodedMessages, (decodedMessage, i) => {
-          return new Promise((resolve, reject) => {
-            this.handler(decodedMessage, err => {
+            this.handler(decodedMessages, err => {
               if (err) {
                 reject(err)
               } else {
-                resolve(this._deleteMessage(messages[i]))
+                resolve(this._deleteMessageBatch(messages))
               }
             })
           })
-        })
-      )
-        .timeout(this.visibilityTimeout * 1000)
+        : Bluebird.map(decodedMessages, (decodedMessage, i) => {
+            return new Promise((resolve, reject) => {
+              this.handler(decodedMessage, err => {
+                if (err) {
+                  reject(err)
+                } else {
+                  resolve(this._deleteMessage(messages[i]))
+                }
+              })
+            })
+          })
+      ).timeout(this.visibilityTimeout * 1000)
     } catch (err) {
       if (err instanceof Bluebird.TimeoutError) {
         debug('Message handler timeout, %o', messages)

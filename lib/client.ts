@@ -1,5 +1,6 @@
 import { SQS, SNS } from 'aws-sdk'
 import * as MNS from 'mns-node-sdk'
+import * as amqplib from 'amqplib'
 
 export interface Client {
   /**
@@ -474,5 +475,97 @@ export class MnsClient implements Client {
     }
     const data = await this.mns.publishMessage(publishParams)
     return { MessageId: data.MessageId, MD5OfMessageBody: data.MessageBodyMD5 }
+  }
+}
+
+export class AmqpClient implements Client {
+  channel: amqplib.Channel
+
+  constructor(options: amqplib.Options.Connect) {
+    amqplib
+      .connect(options)
+      .then(connection => connection.createChannel().then(channel => (this.channel = channel)))
+  }
+
+  async createQueue(params: { QueueName: string }) {
+    await this.channel.assertQueue(params.QueueName)
+    return { Locator: params.QueueName }
+  }
+
+  async sendMessage(params: { Locator: string; MessageBody: string }) {
+    this.channel.sendToQueue(params.Locator, Buffer.from(params.MessageBody))
+    return {}
+  }
+
+  async sendMessageBatch(params: {
+    Locator: string
+    Entries: {
+      Id: string
+      MessageBody: string
+      DelaySeconds?: number
+      Priority?: number
+    }[]
+  }) {
+    await Bluebird.map(
+      params.Entries,
+      entry => this.channel.sendToQueue(params.Locator, Buffer.from(entry.MessageBody)),
+      { concurrency: 5 },
+    )
+  }
+
+  async receiveMessageBatch(params: {
+    Locator: string
+    MaxNumberOfMessages: number
+    WaitTimeSeconds: number
+    VisibilityTimeout: number
+  }) {
+    const data = await this.channel.get(params.Locator)
+
+    return {
+      Messages: data
+        ? [
+            {
+              MessageId: data.properties.messageId,
+              ReceiptHandle: JSON.stringify(data),
+              Body: data.content.toString(),
+            },
+          ]
+        : [],
+    }
+  }
+
+  async deleteMessage(params: { Locator: string; ReceiptHandle: string }) {
+    return this.channel.ack(JSON.parse(params.ReceiptHandle))
+  }
+
+  async deleteMessageBatch(params: {
+    Locator: string
+    Entries: {
+      Id: string
+      ReceiptHandle: string
+    }[]
+  }) {
+    await Bluebird.map(params.Entries, entry => this.channel.ack(JSON.parse(entry.ReceiptHandle)), {
+      concurrency: 5,
+    })
+  }
+
+  async createTopic(params: MNS.Types.CreateTopicRequest) {
+    await this.channel.assertExchange(params.TopicName, 'fanout')
+    return { Locator: params.TopicName }
+  }
+
+  async subscribe(params: { TopicLocator: string; Endpoint: string; QueueLocator: string }) {
+    await this.channel.bindQueue(params.TopicLocator, params.QueueLocator, '')
+    return { SubscribeLocator: `${params.TopicLocator}-${params.Endpoint}` }
+  }
+
+  async setSubscriptionAttributes() {
+    return
+  }
+
+  async publish(params: { Locator: string; Message: string }) {
+    this.channel.publish(params.Locator, '', Buffer.from(params.Message))
+    return {}
   }
 }
