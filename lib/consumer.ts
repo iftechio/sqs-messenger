@@ -7,14 +7,13 @@ import Queue from './queue'
 
 const debug = Debug('sqs-messenger:consumer')
 
-const MAX_DEQUEUE_COUNT = 5
-
 class Consumer<T = any> extends EventEmitter {
   queue: Queue
   running: boolean
   batchSize: number
   visibilityTimeout: number
   batchHandle: boolean
+  maxReceiveCount: number
   handler: (message: T | T[], callback: (err?: Error) => void) => void
   processingMessagesPromise?: Promise<void>
 
@@ -25,6 +24,7 @@ class Consumer<T = any> extends EventEmitter {
       batchSize?: number
       visibilityTimeout?: number
       batchHandle?: boolean
+      maxReceiveCount?: number
     } = {},
   ) {
     super()
@@ -32,6 +32,7 @@ class Consumer<T = any> extends EventEmitter {
     this.batchSize = opts.batchSize || 10
     this.visibilityTimeout = opts.visibilityTimeout || 30
     this.batchHandle = !!opts.batchHandle
+    this.maxReceiveCount = opts.maxReceiveCount || 5
     this.running = false
     this.handler = handler
 
@@ -98,7 +99,7 @@ class Consumer<T = any> extends EventEmitter {
     debug('Processing message, %o', messages)
     const decodedMessages = _.compact(
       await Bluebird.map(messages, async message => {
-        if (message.DequeueCount && parseInt(message.DequeueCount) > MAX_DEQUEUE_COUNT) {
+        if (message.DequeueCount && parseInt(message.DequeueCount) > this.maxReceiveCount) {
           await this._deleteMessage(message)
           await this.queue.client.sendMessage({
             Locator: `${this.queue.realName}-dl`,
@@ -123,27 +124,26 @@ class Consumer<T = any> extends EventEmitter {
     try {
       await (this.batchHandle
         ? new Bluebird<void>((resolve, reject) => {
-          this.handler(decodedMessages, err => {
-            if (err) {
-              reject(err)
-            } else {
-              resolve(this._deleteMessageBatch(messages))
-            }
-          })
-        })
-        : Bluebird.map(decodedMessages, (decodedMessage, i) => {
-          return new Promise((resolve, reject) => {
-            this.handler(decodedMessage, err => {
+            this.handler(decodedMessages, err => {
               if (err) {
                 reject(err)
               } else {
-                resolve(this._deleteMessage(messages[i]))
+                resolve(this._deleteMessageBatch(messages))
               }
             })
           })
-        })
-      )
-        .timeout(this.visibilityTimeout * 1000)
+        : Bluebird.map(decodedMessages, (decodedMessage, i) => {
+            return new Promise((resolve, reject) => {
+              this.handler(decodedMessage, err => {
+                if (err) {
+                  reject(err)
+                } else {
+                  resolve(this._deleteMessage(messages[i]))
+                }
+              })
+            })
+          })
+      ).timeout(this.visibilityTimeout * 1000)
     } catch (err) {
       if (err instanceof Bluebird.TimeoutError) {
         debug('Message handler timeout, %o', messages)
