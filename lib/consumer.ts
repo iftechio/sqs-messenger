@@ -21,18 +21,18 @@ class Consumer<T = any> extends EventEmitter {
     queue: Queue,
     handler: (message: T | T[], callback: (err?: Error) => void) => void,
     opts: {
+      maxReceiveCount: number
       batchSize?: number
       visibilityTimeout?: number
       batchHandle?: boolean
-      maxReceiveCount?: number
-    } = {},
+    },
   ) {
     super()
     this.queue = queue
+    this.maxReceiveCount = opts.maxReceiveCount
     this.batchSize = opts.batchSize || 10
     this.visibilityTimeout = opts.visibilityTimeout || 30
     this.batchHandle = !!opts.batchHandle
-    this.maxReceiveCount = opts.maxReceiveCount || 5
     this.running = false
     this.handler = handler
 

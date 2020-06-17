@@ -181,8 +181,8 @@ class Queue extends EventEmitter {
     },
   ): Consumer<T> {
     const consumer = new Consumer<T>(this, handler, {
-      ...opts,
       maxReceiveCount: this.opts.maxReceiveCount,
+      ...opts,
     })
     this.consumers.push(consumer)
     return consumer
