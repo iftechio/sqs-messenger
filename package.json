@@ -1,6 +1,6 @@
 {
   "name": "@ruguoapp/sqs-messenger",
-  "version": "3.4.5",
+  "version": "3.5.0",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,7 +20,7 @@
   },
   "optionalDependencies": {
     "aws-sdk": "^2.244.1",
-    "mns-node-sdk": "1.0.3"
+    "mns-node-sdk": "^1.0.6"
   },
   "devDependencies": {
     "@types/bluebird": "3.5.29",

@@ -180,7 +180,10 @@ class Queue extends EventEmitter {
       batchHandle?: boolean
     },
   ): Consumer<T> {
-    const consumer = new Consumer<T>(this, handler, opts)
+    const consumer = new Consumer<T>(this, handler, {
+      maxReceiveCount: this.opts.maxReceiveCount,
+      ...opts,
+    })
     this.consumers.push(consumer)
     return consumer
   }
